@@ -49,7 +49,7 @@ apt-get -y install bison flex wget git python3 python3-dev patch \
                libatomic1 uuid-dev openssl libcurl4-openssl-dev \
                libfreetype-dev 
                
-apt-get -y python-is-python3 python3-jinja2
+apt-get -y install python-is-python3 python3-jinja2 python3-pip pyside2-tools
 
 # dnf install -y lsb_release
 
