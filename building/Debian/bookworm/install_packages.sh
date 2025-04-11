@@ -6,6 +6,11 @@
 
 # --trace-expand ./path/to/cmakefiles.txt > trace.txt 2>&1
 # to get outputs
+#
+# /opt/MoonRay/build-deps/OpenImageIO-prefix/src/OpenImageIO/src/libutil/filesystem.cpp: In function ‘std::string OpenImageIO_v2_3::Filesystem::searchpath_find(const std::string&, const std::vector<std::__cxx11::basic_string<char> >&, bool, bool)’:
+# /opt/MoonRay/build-deps/OpenImageIO-prefix/src/OpenImageIO/src/libutil/filesystem.cpp:226:35: warning: ‘bool boost::filesystem::is_regular(const path&, boost::system::error_code&)’ is deprecated: Use is_regular_file() instead [-Wdeprecated-declarations]
+#   226 |         if (filesystem::is_regular(f, ec)) {
+#
 
 install_qt=1
 install_cuda=1
@@ -49,7 +54,7 @@ apt-get -y install bison flex wget git python3 python3-dev patch \
                libatomic1 uuid-dev openssl libcurl4-openssl-dev \
                libfreetype-dev 
                
-apt-get -y install python-is-python3 python3-jinja2 python3-pip pyside2-tools
+apt-get -y install python-is-python3 python3-jinja2 python3-pip pyside2-tools qtbase5-dev-tools
 
 # dnf install -y lsb_release
 
@@ -75,7 +80,8 @@ apt-get -y install lua5.4 liblua5.4-dev
 # dnf install -y openvdb openvdb-libs openvdb-devel #9.1.0
 apt-get -y install libopenvdb-dev
 # dnf install -y tbb tbb-devel python3-tbb #2020.3
-apt-get -y install libtbb-dev
+# TODO install from repo with version 2020.3 
+# apt-get -y install libtbb-dev python3-numpy
 # dnf install -y log4cplus log4cplus-devel #2.0.5
 apt-get -y install liblog4cplus-dev
 # dnf install -y cppunit cppunit-devel #1.15.1

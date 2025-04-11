@@ -100,7 +100,7 @@ set(CHAIN embree)
 ExternalProject_Add(OpenColorIO
     GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/OpenColorIO
     GIT_TAG 056b7b0cb0d087961e9dba75104820e44faf52a1 # v2.0.2
-    PATCH_COMMAND patch src/OpenColorIO/FileRules.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../opencolorio-2.0.2-gcc12.patch
+    PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../opencolorio-2.0.2-gcc12.patch
     DOWNLOAD_EXTRACT_TIMESTAMP True
     INSTALL_DIR ${InstallRoot}
     CMAKE_ARGS
@@ -146,10 +146,12 @@ ExternalProject_Add(OpenImageDenoise
 )
 set(CHAIN OpenImageDenoise)
 
+# TODOInstall TBB 2020.3
 if(NOT NO_USD)
     ExternalProject_Add(USD
         GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
-        GIT_TAG 0b18ad3f840c24eb25e16b795a5b0821cf05126e # v23.11
+        GIT_TAG 0c7b9a95f155c221ff7df9270a39a52e3b23af8b # v22.11
+        PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../usd-22.11.patch
         DOWNLOAD_EXTRACT_TIMESTAMP True
         INSTALL_DIR ${InstallRoot}
         CMAKE_ARGS
