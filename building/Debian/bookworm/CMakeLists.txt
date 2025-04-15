@@ -46,39 +46,10 @@ ExternalProject_Add(TBB
     BUILD_IN_SOURCE 1
     CONFIGURE_COMMAND ""
     BUILD_COMMAND make tbb tbbmalloc tbbproxy ${JOBS_ARG}
-    INSTALL_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install_tbb_2020.3.sh ${CMAKE_CURRENT_BINARY_DIR} ${InstallRoot} 
+    INSTALL_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install_tbb_2020.3.sh ${CMAKE_CURRENT_BINARY_DIR} ${InstallRoot}
     DEPENDS ${CHAIN}
 )
 set(CHAIN TBB)
-
-ExternalProject_Add(OpenSubdiv
-    GIT_REPOSITORY https://github.com/PixarAnimationStudios/OpenSubdiv
-    GIT_TAG 8ffa2b6566be10209529d7a0d1db02a0796b160c # v3_5_0
-    DOWNLOAD_EXTRACT_TIMESTAMP True
-    INSTALL_DIR ${InstallRoot}
-    CMAKE_ARGS
-      -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-      -DCMAKE_BUILD_TYPE=Release
-      -DPYTHON_EXECUTABLE=/usr/bin/python3
-      -DNO_PTEX=1 -DNO_OMP=1 -DNO_TBB=1 -DNO_CUDA=1 -DNO_GLFW_X11=1 -DNO_DOC=1
-      -DNO_OPENCL=1 -DNO_CLEW=1 -DNO_REGRESSION=1 -DNO_EXAMPLES=1 -DNO_TUTORIALS=1 -DNO_GLTESTS=1
-      -DNO_MACOS_FRAMEWORK=1 -DNO_METAL=1 -DNO_TESTS=1
-    DEPENDS ${CHAIN}
-)
-set(CHAIN OpenSubdiv)
-
-ExternalProject_Add(OpenEXR
-    GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openexr
-    GIT_TAG 8bc3741131db146ad08a5b83af9e6e48f0e94a03 # v2.5.7
-    PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/../../Imath_include_paths.patch
-    DOWNLOAD_EXTRACT_TIMESTAMP True
-    INSTALL_DIR ${InstallRoot}
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-        -DBUILD_SHARED_LIBS=OFF
-    DEPENDS ${CHAIN}
-)
-set(CHAIN OpenEXR)
 
 ExternalProject_Add(Random123
     GIT_REPOSITORY https://github.com/DEShawResearch/random123
@@ -120,6 +91,36 @@ ExternalProject_Add(embree
     DEPENDS ${CHAIN}
 )
 set(CHAIN embree)
+
+ExternalProject_Add(OpenSubdiv
+    GIT_REPOSITORY https://github.com/PixarAnimationStudios/OpenSubdiv
+    GIT_TAG 8ffa2b6566be10209529d7a0d1db02a0796b160c # v3_5_0
+    DOWNLOAD_EXTRACT_TIMESTAMP True
+    INSTALL_DIR ${InstallRoot}
+    CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+      -DCMAKE_BUILD_TYPE=Release
+      -DNO_PTEX=1 -DNO_OMP=1 -DNO_TBB=1 -DNO_CUDA=1 -DNO_GLFW_X11=1 -DNO_DOC=1
+      -DNO_OPENCL=1 -DNO_CLEW=1 -DNO_REGRESSION=1 -DNO_EXAMPLES=1 -DNO_TUTORIALS=1 -DNO_GLTESTS=1
+      -DNO_MACOS_FRAMEWORK=1 -DNO_METAL=1 -DNO_TESTS=1
+    DEPENDS ${CHAIN}
+)
+set(CHAIN OpenSubdiv)
+
+ExternalProject_Add(OpenEXR
+    GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openexr
+    GIT_TAG 8bc3741131db146ad08a5b83af9e6e48f0e94a03 # v2.5.7
+    PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/../../Imath_include_paths.patch
+    DOWNLOAD_EXTRACT_TIMESTAMP True
+    INSTALL_DIR ${InstallRoot}
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+        -DBUILD_SHARED_LIBS=OFF
+        -DBoost_LIBRARY_DIR=${InstallRoot}/lib
+        -DBoost_INCLUDE_DIR=${InstallRoot}/include
+DEPENDS ${CHAIN}
+)
+set(CHAIN OpenEXR)
 
 ExternalProject_Add(OpenColorIO
     GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/OpenColorIO

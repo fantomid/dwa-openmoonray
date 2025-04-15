@@ -74,7 +74,7 @@ apt-get -y install python-is-python3 python3-jinja2 python3-pip pyside2-tools qt
 apt-get -y install cmake #3.25.1
 
 apt-get -y install libblosc-dev
-apt-get -y install libboost1.81-all-dev
+# apt-get -y install libboost1.81-all-dev
 # dnf install -y lua lua-libs lua-devel #5.4.4
 apt-get -y install lua5.4 liblua5.4-dev
 # dnf install -y openvdb openvdb-libs openvdb-devel #9.1.0
