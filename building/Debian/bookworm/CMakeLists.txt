@@ -27,17 +27,17 @@ ExternalProject_Add(JsonCpp
 )
 set(CHAIN JsonCpp)
 
-ExternalProject_Add(TBB
-    GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB
-    GIT_TAG 81e4471d1191c75e0a78311c584b64b6591da842 # v2020.3.3
-    DOWNLOAD_EXTRACT_TIMESTAMP True
-    BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND make tbb tbbmalloc tbbproxy tbbbind ${JOBS_ARG}
-    INSTALL_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install_tbb_2020.3.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${InstallRoot}
-    DEPENDS ${CHAIN}
-)
-set(CHAIN TBB)
+# ExternalProject_Add(TBB
+#     GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB
+#     GIT_TAG 81e4471d1191c75e0a78311c584b64b6591da842 # v2020.3.3
+#     DOWNLOAD_EXTRACT_TIMESTAMP True
+#     BUILD_IN_SOURCE 1
+#     CONFIGURE_COMMAND ""
+#     BUILD_COMMAND make tbb tbbmalloc tbbproxy tbbbind ${JOBS_ARG}
+#     INSTALL_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/install_tbb_2020.3.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${InstallRoot}
+#     DEPENDS ${CHAIN}
+# )
+# set(CHAIN TBB)
 
 ExternalProject_Add(Random123
     GIT_REPOSITORY https://github.com/DEShawResearch/random123
@@ -213,12 +213,12 @@ if(NOT NO_USD)
             -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
             -DCMAKE_PREFIX_PATH=<INSTALL_DIR>
             -DCMAKE_MODULE_PATH::PATH=<INSTALL_DIR>/lib/cmake
+            -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
             -DPXR_ENABLE_PYTHON_SUPPORT=ON
             -DPXR_USE_PYTHON_3=ON
             -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.11.so
             -DPYTHON_INCLUDE_DIR=/usr/include/python3.11
             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-            -DTBB_USE_DEBUG_BUILD=OFF
             -DPXR_BUILD_TESTS=OFF
             -DPXR_BUILD_EXAMPLES=OFF
             -DPXR_BUILD_TUTORIALS=OFF
@@ -226,6 +226,8 @@ if(NOT NO_USD)
             -DPXR_ENABLE_PTEX_SUPPORT=OFF
             -DPXR_ENABLE_OPENVDB_SUPPORT=OFF
             -DPXR_BUILD_USDVIEW=OFF
+            -DTBB_USE_DEBUG_BUILD=OFF
+            -DTBB_SUPPRESS_DEPRECATED_MESSAGES=1
         DEPENDS ${CHAIN}
     )
     set(CHAIN USD)
