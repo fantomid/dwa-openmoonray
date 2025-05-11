@@ -24,6 +24,23 @@ index 16fbbbd..ecc142d 100644
  
  
  struct EvalBsdfIntegralTask {
+diff --git a/cmd/denoise_cmd/CMakeLists.txt b/cmd/denoise_cmd/CMakeLists.txt
+index 4a0f81e..6bcb008 100644
+--- a/cmd/denoise_cmd/CMakeLists.txt
++++ b/cmd/denoise_cmd/CMakeLists.txt
+@@ -12,11 +12,11 @@ target_sources(${target}
+ 
+ target_link_libraries(${target}
+     PRIVATE
+-        ${PROJECT_NAME}::rendering_rndr      
+         McrtDenoise::denoiser  
+         SceneRdl2::render_logging
+         SceneRdl2::render_util
+         OpenImageIO::OpenImageIO
++        "$<LINK_GROUP:RESCAN,${PROJECT_NAME}::rendering_pbr,${PROJECT_NAME}::rendering_rt,${PROJECT_NAME}::rendering_rndr>"
+ )
+ 
+ # Set standard compile/link options
 diff --git a/dso/map/Image/ImageMap.cc b/dso/map/Image/ImageMap.cc
 index 11b2f48..7c61e20 100644
 --- a/dso/map/Image/ImageMap.cc
@@ -420,6 +437,28 @@ index 54bcb19..bfda8fa 100644
  
          if (gPrivate.mRefCount == 0) {
              initPrivate(initParams);
+diff --git a/lib/rendering/rndr/CMakeLists.txt b/lib/rendering/rndr/CMakeLists.txt
+index 91e2da5..6d5b979 100644
+--- a/lib/rendering/rndr/CMakeLists.txt
++++ b/lib/rendering/rndr/CMakeLists.txt
+@@ -116,8 +116,6 @@ target_link_libraries(${component}
+         ${PROJECT_NAME}::rendering_displayfilter
+         ${PROJECT_NAME}::rendering_mcrt_common
+         ${PROJECT_NAME}::rendering_geom
+-        ${PROJECT_NAME}::rendering_pbr
+-        ${PROJECT_NAME}::rendering_rt
+         ${PROJECT_NAME}::statistics
+         ${PROJECT_NAME}::texturing_sampler
+         OpenImageIO::OpenImageIO
+@@ -125,6 +123,8 @@ target_link_libraries(${component}
+         TBB::tbb
+         embree
+         ${PlatformSpecificLibs}
++        "$<LINK_GROUP:RESCAN,${PROJECT_NAME}::rendering_pbr,${PROJECT_NAME}::rendering_rt>"
++
+ )
+ 
+ # If at Dreamworks add a SConscript stub file so others can use this library.
 diff --git a/lib/rendering/rndr/RenderContext.cc b/lib/rendering/rndr/RenderContext.cc
 index 69f5275..7c7e97f 100644
 --- a/lib/rendering/rndr/RenderContext.cc
@@ -597,6 +636,18 @@ index ad4a4f3..74d3fdb 100644
  
  
  class MetalGPUAccelerator
+diff --git a/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h b/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
+index 2b90a83..3122d2b 100644
+--- a/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
++++ b/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
+@@ -8,6 +8,7 @@
+ #include "OptixGPUShadowLinking.h"
+ 
+ #include <cuda.h>
++#include <array>
+ #include <vector>
+ 
+ namespace moonray {
 diff --git a/lib/rendering/shading/Material.cc b/lib/rendering/shading/Material.cc
 index 5a963f3..494c036 100644
 --- a/lib/rendering/shading/Material.cc
