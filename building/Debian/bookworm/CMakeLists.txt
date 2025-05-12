@@ -196,7 +196,7 @@ ExternalProject_Add(OpenImageDenoise
 set(CHAIN OpenImageDenoise)
 
 if(NOT NO_USD)
-    If USD_23_11_BLENDER_4_1
+    if (USD_23_11_BLENDER_4_1)
         ExternalProject_Add(USD
             GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
             GIT_TAG 0b18ad3f840c24eb25e16b795a5b0821cf05126e # v23.11 Blender 4.1
@@ -223,7 +223,7 @@ if(NOT NO_USD)
         # TODO
         # GIT_TAG 2864f3d04f396432f22ec5d6928fc37d34bb4c90 # v24.05 Blender 4.2
         # GIT_TAG ba8aaf1f9e3d72822ce9c9041a6dd75e4eb53906 # v25.02 Blender 4.4
-    Else
+    else()
         ExternalProject_Add(USD
             GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
             GIT_TAG 0c7b9a95f155c221ff7df9270a39a52e3b23af8b # v22.11
@@ -247,6 +247,7 @@ if(NOT NO_USD)
                 -DTBB_USE_DEBUG_BUILD=OFF
             DEPENDS ${CHAIN}
         )
+    endif()
     set(CHAIN USD)
 endif()
 

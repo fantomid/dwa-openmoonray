@@ -5,7 +5,7 @@
 # source this script in bash
 
 install_qt=1
-install_cuda=0
+install_cuda=1
 install_cgroup=1
 for i in "$@" 
 do
@@ -31,7 +31,6 @@ done
 # install
 if [ $install_cuda -eq 1 ] 
 then
-    mkdir /opt/MoonRay/tmp
     wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda_12.1.0_530.30.02_linux.run
     sh cuda_12.1.0_530.30.02_linux.run --tmpdir=/opt/MoonRay/tmp
 fi
@@ -39,7 +38,10 @@ fi
 apt-get -y install build-essential git
 
 apt-get -y install libglvnd-dev # 1.6.0-1
-apt-get -y install libcgroup2 libcgroup-dev # 2.0.2-2
+if [ $install_cgroup -eq 1 ] 
+then
+    apt-get -y install libcgroup2 libcgroup-dev # 2.0.2-2
+fi
 
 apt-get -y install bison flex wget git python3 python3-dev patch \
                libgif-dev libmng-dev libtiff5-dev libjpeg62-turbo-dev \
@@ -62,10 +64,14 @@ apt-get -y install libmicrohttpd-dev # 0.9.75-6
 # not required if you are not building the GUI apps
 if [ $install_qt -eq 1 ]
 then
-    apt install qtbase5-dev qtscript5-dev
+    apt-get -y install qtbase5-dev qtscript5-dev
 fi
 
 if [ $install_cuda -eq 1 ]
+then
 	export PATH=/usr/local/cuda-12.1/bin:${PATH}
 	export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:${LD_LIBRARY_PATH}
+    echo "Update the ~/.bashrc file with:"
+    echo "export PATH=/usr/local/cuda-12.1/bin:${PATH}"
+    echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:${LD_LIBRARY_PATH}"
 fi
