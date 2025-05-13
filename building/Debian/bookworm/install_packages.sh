@@ -31,6 +31,7 @@ done
 # install
 if [ $install_cuda -eq 1 ] 
 then
+    echo "CUDA 12.1 installation, don't install the driver"
     wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda_12.1.0_530.30.02_linux.run
     sh cuda_12.1.0_530.30.02_linux.run --tmpdir=/opt/MoonRay/tmp
 fi
@@ -71,7 +72,7 @@ if [ $install_cuda -eq 1 ]
 then
 	export PATH=/usr/local/cuda-12.1/bin:${PATH}
 	export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:${LD_LIBRARY_PATH}
-    echo "Update the ~/.bashrc file with:"
+    echo "To complete your CUDA installation, update your ~/.bashrc file with:"
     echo "export PATH=/usr/local/cuda-12.1/bin:${PATH}"
     echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:${LD_LIBRARY_PATH}"
 fi
