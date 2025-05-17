@@ -200,7 +200,6 @@ if(NOT NO_USD)
         ExternalProject_Add(USD
             GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
             GIT_TAG 0b18ad3f840c24eb25e16b795a5b0821cf05126e # v23.11 Blender 4.1
-            PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../usd-22.11.patch
             DOWNLOAD_EXTRACT_TIMESTAMP True
             CMAKE_ARGS
                 -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
@@ -220,9 +219,54 @@ if(NOT NO_USD)
                 -DTBB_USE_DEBUG_BUILD=OFF
             DEPENDS ${CHAIN}
         )
-        # TODO
-        # GIT_TAG 2864f3d04f396432f22ec5d6928fc37d34bb4c90 # v24.05 Blender 4.2
-        # GIT_TAG ba8aaf1f9e3d72822ce9c9041a6dd75e4eb53906 # v25.02 Blender 4.4
+    # elseif(USD_24_05_BLENDER_4_2)
+    #     ExternalProject_Add(USD
+    #         GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
+    #         GIT_TAG 2864f3d04f396432f22ec5d6928fc37d34bb4c90 # v24.05 Blender 4.2
+    #         DOWNLOAD_EXTRACT_TIMESTAMP True
+    #         CMAKE_ARGS
+    #             -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
+    #             -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
+    #             -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
+    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+    #             -DPXR_ENABLE_PYTHON_SUPPORT=ON
+    #             -DPXR_USE_PYTHON_3=ON
+    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+    #             -DPXR_BUILD_TESTS=OFF
+    #             -DPXR_BUILD_EXAMPLES=OFF
+    #             -DPXR_BUILD_TUTORIALS=OFF
+    #             -DPXR_BUILD_USD_TOOLS=OFF
+    #             -DPXR_ENABLE_PTEX_SUPPORT=OFF
+    #             -DPXR_ENABLE_OPENVDB_SUPPORT=ON
+    #             -DPXR_BUILD_USDVIEW=OFF
+    #             -DTBB_USE_DEBUG_BUILD=OFF
+    #         DEPENDS ${CHAIN}
+    #     )
+    # elseif(USD_25_02_BLENDER_4_4)
+    #     ExternalProject_Add(USD
+    #         GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
+    #         GIT_TAG ba8aaf1f9e3d72822ce9c9041a6dd75e4eb53906 # v25.02 Blender 4.4
+    #         DOWNLOAD_EXTRACT_TIMESTAMP True
+    #         CMAKE_ARGS
+    #             -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
+    #             -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
+    #             -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
+    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+    #             -DPXR_ENABLE_PYTHON_SUPPORT=ON
+    #             -DPXR_USE_PYTHON_3=ON
+    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+    #             -DPXR_BUILD_TESTS=OFF
+    #             -DPXR_BUILD_EXAMPLES=OFF
+    #             -DPXR_BUILD_TUTORIALS=OFF
+    #             -DPXR_BUILD_USD_TOOLS=OFF
+    #             -DPXR_ENABLE_PTEX_SUPPORT=OFF
+    #             -DPXR_ENABLE_OPENVDB_SUPPORT=ON
+    #             -DPXR_BUILD_USDVIEW=OFF
+    #             -DPXR_BUILD_MONOLITHIC=ON
+    #             -DPXR_MONOLITHIC_IMPORT:PATH=${InstallRoot}
+    #             -DTBB_USE_DEBUG_BUILD=OFF
+    #         DEPENDS ${CHAIN}
+    #     )
     else()
         ExternalProject_Add(USD
             GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
