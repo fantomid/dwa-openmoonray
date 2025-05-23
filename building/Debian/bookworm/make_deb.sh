@@ -22,8 +22,8 @@ fi
 
 cd $1/building/Debian/bookworm/package
 
-mkdir -p moonray/opt/MoonRay
-cp -r $2/* moonray/opt/MoonRay/
+mkdir -p moonray/opt/MoonRay/installs
+cp -r $2/* moonray/opt/MoonRay/installs
 
 dpkg-deb --build moonray
 VERSION=`dpkg -I moonray.deb | grep Version | cut -d ":" -f 2 | sed 's/ //g'`
