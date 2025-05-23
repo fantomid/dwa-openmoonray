@@ -1,5 +1,5 @@
 Package: MoonRay
-Version: 1.7.0.0
+Version: 1.7.0.0~pre1-1
 Maintainer: Guillaume GASNIER, fantomid@free.fr
 Architecture: amd64
 Description: MoonRay Production Renderer
