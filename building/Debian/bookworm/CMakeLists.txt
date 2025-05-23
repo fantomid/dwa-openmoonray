@@ -51,44 +51,32 @@ ExternalProject_Add(Random123
 )
 set(CHAIN Random123)
 
-ExternalProject_Add(Boost
-    URL https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.tar.gz
-    UPDATE_COMMAND ./bootstrap.sh --prefix=${InstallRoot}
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ./b2 install ${JOBS_ARG} --with_python variant=release link=shared threading=multi define=BOOST_UNORDERED_HAVE_PIECEWISE_CONSTRUCT=0
-    BUILD_IN_SOURCE 1
-    INSTALL_COMMAND ""
-    DOWNLOAD_EXTRACT_TIMESTAMP True
-    DEPENDS ${CHAIN}
+If(NOT BUILD_WITH_BLENDER_LIBS)
+    ExternalProject_Add(Boost
+       URL https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.tar.gz
+       UPDATE_COMMAND ./bootstrap.sh --prefix=${InstallRoot}
+       CONFIGURE_COMMAND ""
+       BUILD_COMMAND ./b2 install ${JOBS_ARG} --with_python variant=release link=shared threading=multi define=BOOST_UNORDERED_HAVE_PIECEWISE_CONSTRUCT=0
+       BUILD_IN_SOURCE 1
+       INSTALL_COMMAND ""
+       DOWNLOAD_EXTRACT_TIMESTAMP True
+       DEPENDS ${CHAIN}
+   )
+   set(CHAIN Boost)
+
+   ExternalProject_Add(OpenVDB
+       GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openvdb
+       GIT_TAG ab935574cdb25c3df66b068fce2a3b0a74281c54 # v9.1.0
+       PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../openvdb-9.1.0.patch
+       DOWNLOAD_EXTRACT_TIMESTAMP True
+       CMAKE_ARGS
+           -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
+           -DCMAKE_MODULE_PATH:PATH=${InstallRoot}/lib/cmake
+           -DTBB_USE_STATIC_LIBS=NO
+       DEPENDS ${CHAIN}
+   )
+   set(CHAIN OpenVDB)
 )
-set(CHAIN Boost)
-
-# # ExternalProject_Add(Imath
-# #     GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/Imath
-# #     GIT_TAG c0396a055a01bc537d32f435aee11a9b7ed6f0b5 # v3.1.12
-# #     INSTALL_DIR ${InstallRoot}
-# #     DOWNLOAD_EXTRACT_TIMESTAMP True
-# #     CMAKE_ARGS
-# #         -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-# #         -DCMAKE_MODULE_PATH:PATH=<INSTALL_DIR>/lib/cmake
-# #         -DTBB_USE_STATIC_LIBS=NO
-# #     DEPENDS ${CHAIN}
-# # )
-# # set(CHAIN Imath)
-
-
-ExternalProject_Add(OpenVDB
-    GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openvdb
-    GIT_TAG ab935574cdb25c3df66b068fce2a3b0a74281c54 # v9.1.0
-    PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../openvdb-9.1.0.patch
-    DOWNLOAD_EXTRACT_TIMESTAMP True
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-        -DCMAKE_MODULE_PATH:PATH=${InstallRoot}/lib/cmake
-        -DTBB_USE_STATIC_LIBS=NO
-    DEPENDS ${CHAIN}
-)
-set(CHAIN OpenVDB)
 
 ExternalProject_Add(ISPC
     URL https://github.com/ispc/ispc/releases/download/v1.20.0/ispc-v1.20.0-linux.tar.gz
