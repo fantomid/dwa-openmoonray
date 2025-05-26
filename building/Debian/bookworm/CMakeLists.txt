@@ -51,32 +51,30 @@ ExternalProject_Add(Random123
 )
 set(CHAIN Random123)
 
-If(NOT BUILD_WITH_BLENDER_LIBS)
-    ExternalProject_Add(Boost
-       URL https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.tar.gz
-       UPDATE_COMMAND ./bootstrap.sh --prefix=${InstallRoot}
-       CONFIGURE_COMMAND ""
-       BUILD_COMMAND ./b2 install ${JOBS_ARG} --with_python variant=release link=shared threading=multi define=BOOST_UNORDERED_HAVE_PIECEWISE_CONSTRUCT=0
-       BUILD_IN_SOURCE 1
-       INSTALL_COMMAND ""
-       DOWNLOAD_EXTRACT_TIMESTAMP True
-       DEPENDS ${CHAIN}
-   )
-   set(CHAIN Boost)
-
-   ExternalProject_Add(OpenVDB
-       GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openvdb
-       GIT_TAG ab935574cdb25c3df66b068fce2a3b0a74281c54 # v9.1.0
-       PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../openvdb-9.1.0.patch
-       DOWNLOAD_EXTRACT_TIMESTAMP True
-       CMAKE_ARGS
-           -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-           -DCMAKE_MODULE_PATH:PATH=${InstallRoot}/lib/cmake
-           -DTBB_USE_STATIC_LIBS=NO
-       DEPENDS ${CHAIN}
-   )
-   set(CHAIN OpenVDB)
+ExternalProject_Add(Boost
+    URL https://sourceforge.net/projects/boost/files/boost/1.78.0/boost_1_78_0.tar.gz
+    UPDATE_COMMAND ./bootstrap.sh --prefix=${InstallRoot}
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ./b2 install ${JOBS_ARG} --with_python variant=release link=shared threading=multi define=BOOST_UNORDERED_HAVE_PIECEWISE_CONSTRUCT=0
+    BUILD_IN_SOURCE 1
+    INSTALL_COMMAND ""
+    DOWNLOAD_EXTRACT_TIMESTAMP True
+    DEPENDS ${CHAIN}
 )
+set(CHAIN Boost)
+
+ExternalProject_Add(OpenVDB
+    GIT_REPOSITORY https://github.com/AcademySoftwareFoundation/openvdb
+    GIT_TAG ab935574cdb25c3df66b068fce2a3b0a74281c54 # v9.1.0
+    PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../openvdb-9.1.0.patch
+    DOWNLOAD_EXTRACT_TIMESTAMP True
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
+        -DCMAKE_MODULE_PATH:PATH=${InstallRoot}/lib/cmake
+        -DTBB_USE_STATIC_LIBS=NO
+    DEPENDS ${CHAIN}
+)
+set(CHAIN OpenVDB)
 
 ExternalProject_Add(ISPC
     URL https://github.com/ispc/ispc/releases/download/v1.20.0/ispc-v1.20.0-linux.tar.gz
@@ -183,103 +181,28 @@ ExternalProject_Add(OpenImageDenoise
 )
 set(CHAIN OpenImageDenoise)
 
-if(NOT NO_USD)
-    if (USD_23_11_BLENDER_4_1)
-        ExternalProject_Add(USD
-            GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
-            GIT_TAG 0b18ad3f840c24eb25e16b795a5b0821cf05126e # v23.11 Blender 4.1
-            DOWNLOAD_EXTRACT_TIMESTAMP True
-            CMAKE_ARGS
-                -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-                -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
-                -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
-                -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-                -DPXR_ENABLE_PYTHON_SUPPORT=ON
-                -DPXR_USE_PYTHON_3=ON
-                -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-                -DPXR_BUILD_TESTS=OFF
-                -DPXR_BUILD_EXAMPLES=OFF
-                -DPXR_BUILD_TUTORIALS=OFF
-                -DPXR_BUILD_USD_TOOLS=OFF
-                -DPXR_ENABLE_PTEX_SUPPORT=OFF
-                -DPXR_ENABLE_OPENVDB_SUPPORT=ON
-                -DPXR_BUILD_USDVIEW=OFF
-                -DTBB_USE_DEBUG_BUILD=OFF
-            DEPENDS ${CHAIN}
-        )
-    # elseif(USD_24_05_BLENDER_4_2)
-    #     ExternalProject_Add(USD
-    #         GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
-    #         GIT_TAG 2864f3d04f396432f22ec5d6928fc37d34bb4c90 # v24.05 Blender 4.2
-    #         DOWNLOAD_EXTRACT_TIMESTAMP True
-    #         CMAKE_ARGS
-    #             -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-    #             -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
-    #             -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
-    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-    #             -DPXR_ENABLE_PYTHON_SUPPORT=ON
-    #             -DPXR_USE_PYTHON_3=ON
-    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-    #             -DPXR_BUILD_TESTS=OFF
-    #             -DPXR_BUILD_EXAMPLES=OFF
-    #             -DPXR_BUILD_TUTORIALS=OFF
-    #             -DPXR_BUILD_USD_TOOLS=OFF
-    #             -DPXR_ENABLE_PTEX_SUPPORT=OFF
-    #             -DPXR_ENABLE_OPENVDB_SUPPORT=ON
-    #             -DPXR_BUILD_USDVIEW=OFF
-    #             -DTBB_USE_DEBUG_BUILD=OFF
-    #         DEPENDS ${CHAIN}
-    #     )
-    # elseif(USD_25_02_BLENDER_4_4)
-    #     ExternalProject_Add(USD
-    #         GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
-    #         GIT_TAG ba8aaf1f9e3d72822ce9c9041a6dd75e4eb53906 # v25.02 Blender 4.4
-    #         DOWNLOAD_EXTRACT_TIMESTAMP True
-    #         CMAKE_ARGS
-    #             -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-    #             -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
-    #             -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
-    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-    #             -DPXR_ENABLE_PYTHON_SUPPORT=ON
-    #             -DPXR_USE_PYTHON_3=ON
-    #             -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-    #             -DPXR_BUILD_TESTS=OFF
-    #             -DPXR_BUILD_EXAMPLES=OFF
-    #             -DPXR_BUILD_TUTORIALS=OFF
-    #             -DPXR_BUILD_USD_TOOLS=OFF
-    #             -DPXR_ENABLE_PTEX_SUPPORT=OFF
-    #             -DPXR_ENABLE_OPENVDB_SUPPORT=ON
-    #             -DPXR_BUILD_USDVIEW=OFF
-    #             -DPXR_BUILD_MONOLITHIC=ON
-    #             -DPXR_MONOLITHIC_IMPORT:PATH=${InstallRoot}
-    #             -DTBB_USE_DEBUG_BUILD=OFF
-    #         DEPENDS ${CHAIN}
-    #     )
-    else()
-        ExternalProject_Add(USD
-            GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
-            GIT_TAG 0c7b9a95f155c221ff7df9270a39a52e3b23af8b # v22.11
-            PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../usd-22.11.patch
-            DOWNLOAD_EXTRACT_TIMESTAMP True
-            CMAKE_ARGS
-                -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
-                -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
-                -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
-                -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-                -DPXR_ENABLE_PYTHON_SUPPORT=ON
-                -DPXR_USE_PYTHON_3=ON
-                -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
-                -DPXR_BUILD_TESTS=OFF
-                -DPXR_BUILD_EXAMPLES=OFF
-                -DPXR_BUILD_TUTORIALS=OFF
-                -DPXR_BUILD_USD_TOOLS=OFF
-                -DPXR_ENABLE_PTEX_SUPPORT=OFF
-                -DPXR_ENABLE_OPENVDB_SUPPORT=ON
-                -DPXR_BUILD_USDVIEW=OFF
-                -DTBB_USE_DEBUG_BUILD=OFF
-            DEPENDS ${CHAIN}
-        )
-    endif()
-    set(CHAIN USD)
-endif()
+ExternalProject_Add(USD
+    GIT_REPOSITORY https://github.com/PixarAnimationStudios/USD
+    GIT_TAG 0c7b9a95f155c221ff7df9270a39a52e3b23af8b # v22.11
+    PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/../usd-22.11.patch
+    DOWNLOAD_EXTRACT_TIMESTAMP True
+    CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX:PATH=${InstallRoot}
+        -DCMAKE_PREFIX_PATH:PATH=${InstallRoot}
+        -DCMAKE_MODULE_PATH=${InstallRoot}/lib/cmake
+        -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+        -DPXR_ENABLE_PYTHON_SUPPORT=ON
+        -DPXR_USE_PYTHON_3=ON
+        -DPXR_PY_UNDEFINED_DYNAMIC_LOOKUP=ON
+        -DPXR_BUILD_TESTS=OFF
+        -DPXR_BUILD_EXAMPLES=OFF
+        -DPXR_BUILD_TUTORIALS=OFF
+        -DPXR_BUILD_USD_TOOLS=OFF
+        -DPXR_ENABLE_PTEX_SUPPORT=OFF
+        -DPXR_ENABLE_OPENVDB_SUPPORT=ON
+        -DPXR_BUILD_USDVIEW=OFF
+        -DTBB_USE_DEBUG_BUILD=OFF
+    DEPENDS ${CHAIN}
+)
+set(CHAIN USD)
 

@@ -28,7 +28,7 @@ done
 
 
 # not required if you are not building with GPU support
-# install
+# install only the include files and the libraries
 if [ $install_cuda -eq 1 ] 
 then
     echo "CUDA 12.1 installation, don't install the driver"
