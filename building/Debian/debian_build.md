@@ -44,6 +44,8 @@ Once you have extracted the download contents, note the location of the header f
 ---
 ## Step 4. Build the remaining dependencies from source
 ---
+    Note: You may have to adapt the path to build
+    for other Debian's version
     ```
     cd build-deps
     cmake ../source/openmoonray/building/Debian/bookworm
@@ -56,7 +58,7 @@ Once you have extracted the download contents, note the location of the header f
     Note: Before building MoonRay, the source code has to be patched
     ```
     cd /opt/MoonRay/source/openmoonray
-    ./building/Debian/bookworm/apply_patch.sh /opt/MoonRay/source/openmoonray
+    source ./building/Debian/apply_patch.sh /opt/MoonRay/source/openmoonray
     ```
 
 ---
@@ -70,7 +72,7 @@ Once you have extracted the download contents, note the location of the header f
     ```
 
 ---
-## Step 6. Run/Test
+## Step 7. Run/Test
 ---
     ```
     source /opt/MoonRay/installs/openmoonray/scripts/setup.sh
@@ -79,7 +81,7 @@ Once you have extracted the download contents, note the location of the header f
     ```
 
 ---
-## Step 8. Post-build/install Cleanup/create 
+## Step 8. Post-build/install Cleanup
 ---
     ```
     rm -rf /opt/MoonRay/{build,build-deps}
@@ -88,8 +90,7 @@ Once you have extracted the download contents, note the location of the header f
 ---
 ## Step 9. Create the Debian package
 ---
-    Note: If MoonRay was built only for cpu, add the argumment `--cpu` at the end of the command line
     ```
     cd /opt/MoonRay/source/openmoonray
-    ./building/Debian/bookworm/make_deb.sh /opt/MoonRay/source/openmoonray /opt/MoonRay/install
+    source ./building/Debian/make_deb.sh /opt/MoonRay/source/openmoonray /opt/MoonRay/installs
     ```

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ $# -lt 4 ] ; then
+if [ $# -lt 3 ] ; then
     echo "MoonRay source, install directories and package's type are mandatory to create the Debian's package !"
     exit 1
 fi
@@ -20,12 +20,10 @@ if [ ! -d "$2/openmoonray" ]; then
     exit
 fi
 
-if [ $3 -eq "cpu"]
-then
+if [ $3 = "cpu"]; then
     PACKAGE_DIR=$1/building/Debian/bookworm/package
     PACKAGE_NAME=moonray
-elif [ $3 -eq "xpu"]
-then
+elif [ $3 = "xpu"]; then
     PACKAGE_DIR=$1/building/Debian/bookworm/package-xpu
     PACKAGE_NAME=moonray-xpu
 else
