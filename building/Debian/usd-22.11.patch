@@ -1,0 +1,800 @@
+diff --git a/cmake/defaults/Packages.cmake b/cmake/defaults/Packages.cmake
+index 825c5af1f..fe1510cdb 100644
+--- a/cmake/defaults/Packages.cmake
++++ b/cmake/defaults/Packages.cmake
+@@ -37,71 +37,71 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+ find_package(Threads REQUIRED)
+ set(PXR_THREAD_LIBS "${CMAKE_THREAD_LIBS_INIT}")
+ 
+-# Find Boost package before getting any boost specific components as we need to
+-# disable boost-provided cmake config, based on the boost version found.
+-find_package(Boost REQUIRED)
+-
+-# Boost provided cmake files (introduced in boost version 1.70) result in 
+-# inconsistent build failures on different platforms, when trying to find boost 
+-# component dependencies like python, program options, etc. Refer some related 
+-# discussions:
+-# https://github.com/boostorg/python/issues/262#issuecomment-483069294
+-# https://github.com/boostorg/boost_install/issues/12#issuecomment-508683006
+-#
+-# Hence to avoid issues with Boost provided cmake config, Boost_NO_BOOST_CMAKE
+-# is enabled by default for boost version 1.70 and above. If a user explicitly 
+-# set Boost_NO_BOOST_CMAKE to Off, following will be a no-op.
+-if (${Boost_VERSION_STRING} VERSION_GREATER_EQUAL "1.70")
+-    option(Boost_NO_BOOST_CMAKE "Disable boost-provided cmake config" ON)
++if(PXR_ENABLE_OPENVDB_SUPPORT)
++    # Find Boost package before getting any boost specific components as we need to
++    # disable boost-provided cmake config, based on the boost version found.
++    find_package(Boost REQUIRED)
++    # If a user explicitly sets Boost_NO_BOOST_CMAKE to On, following will
++    # disable the use of boost provided cmake config.
++    option(Boost_NO_BOOST_CMAKE "Disable boost-provided cmake config" OFF)
+     if (Boost_NO_BOOST_CMAKE)
+-        message(STATUS "Disabling boost-provided cmake config")
++      message(STATUS "Disabling boost-provided cmake config")
+     endif()
+ endif()
+ 
+ if(PXR_ENABLE_PYTHON_SUPPORT)
+     # --Python.
+-    if(PXR_USE_PYTHON_3)
+-        find_package(PythonInterp 3.0 REQUIRED)
+-        find_package(PythonLibs 3.0 REQUIRED)
+-    else()
+-        find_package(PythonInterp 2.7 REQUIRED)
+-        find_package(PythonLibs 2.7 REQUIRED)
+-    endif()
++    macro(setup_python_package package)
++        find_package(${package} COMPONENTS Interpreter Development REQUIRED)
++
++        # Set up versionless variables so that downstream libraries don't
++        # have to worry about which Python version is being used.
++        set(PYTHON_EXECUTABLE "${${package}_EXECUTABLE}")
++        set(PYTHON_INCLUDE_DIRS "${${package}_INCLUDE_DIRS}")
++        set(PYTHON_VERSION_MAJOR "${${package}_VERSION_MAJOR}")
++        set(PYTHON_VERSION_MINOR "${${package}_VERSION_MINOR}")
++
++        # Convert paths to CMake path format on Windows to avoid string parsing
++        # issues when we pass PYTHON_EXECUTABLE or PYTHON_INCLUDE_DIRS to
++        # pxr_library or other functions.
++        if(WIN32)
++            file(TO_CMAKE_PATH ${PYTHON_EXECUTABLE} PYTHON_EXECUTABLE)
++            file(TO_CMAKE_PATH ${PYTHON_INCLUDE_DIRS} PYTHON_INCLUDE_DIRS)
++        endif()
+ 
+-    if(WIN32 AND PXR_USE_DEBUG_PYTHON)
+-        set(Boost_USE_DEBUG_PYTHON ON)
+-    endif()
++        # PXR_PY_UNDEFINED_DYNAMIC_LOOKUP might be explicitly set when 
++        # packaging wheels, or when cross compiling to a Python environment 
++        # that is not the current interpreter environment.
++        # If it was not explicitly set to ON or OFF, then determine whether 
++        # Python was statically linked to its runtime library by fetching the
++        # sysconfig variable LDLIBRARY, and set the variable accordingly.
++        # If the variable does not exist, PXR_PY_UNDEFINED_DYNAMIC_LOOKUP will
++        # default to OFF. On Windows, LDLIBRARY does not exist, as the default
++        # will always be OFF.
++        if((NOT WIN32) AND (NOT DEFINED PXR_PY_UNDEFINED_DYNAMIC_LOOKUP))
++            execute_process(COMMAND ${PYTHON_EXECUTABLE} "-c" "import sysconfig;print(sysconfig.get_config_var('LDLIBRARY'))"
++                OUTPUT_STRIP_TRAILING_WHITESPACE
++                OUTPUT_VARIABLE PXR_PYTHON_LINKED_LIBRARY
++            )
++            get_filename_component(PXR_PYTHON_LINKED_LIBRARY_EXT ${PXR_PYTHON_LINKED_LIBRARY} LAST_EXT)
++            if(PXR_PYTHON_LINKED_LIBRARY_EXT STREQUAL ".a")
++                set(PXR_PY_UNDEFINED_DYNAMIC_LOOKUP ON)
++                message(STATUS 
++                        "PXR_PY_UNDEFINED_DYNAMIC_LOOKUP wasn't specified, forced ON because Python statically links ${PXR_PYTHON_LINKED_LIBRARY}")
++            endif()
++        endif()
+ 
+-    # This option indicates that we don't want to explicitly link to the python
+-    # libraries. See BUILDING.md for details.
+-    if(PXR_PY_UNDEFINED_DYNAMIC_LOOKUP AND NOT WIN32 )
+-        set(PYTHON_LIBRARIES "")
+-    endif()
++        # This option indicates that we don't want to explicitly link to the
++        # python libraries. See BUILDING.md for details.
++        if(PXR_PY_UNDEFINED_DYNAMIC_LOOKUP AND NOT WIN32)
++            set(PYTHON_LIBRARIES "")
++        else()
++            set(PYTHON_LIBRARIES "${package}::Python")
++        endif()
++    endmacro()
+ 
+-    if (${Boost_VERSION_STRING} VERSION_GREATER_EQUAL "1.67")
+-        # As of boost 1.67 the boost_python component name includes the
+-        # associated Python version (e.g. python27, python36). 
+-        # XXX: After boost 1.73, boost provided config files should be able to 
+-        # work without specifying a python version!
+-        # https://github.com/boostorg/boost_install/blob/master/BoostConfig.cmake
+-
+-        # Find the component under the versioned name and then set the generic
+-        # Boost_PYTHON_LIBRARY variable so that we don't have to duplicate this
+-        # logic in each library's CMakeLists.txt.
+-        set(python_version_nodot "${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+-        find_package(Boost
+-            COMPONENTS
+-                python${python_version_nodot}
+-            REQUIRED
+-        )
+-        set(Boost_PYTHON_LIBRARY "${Boost_PYTHON${python_version_nodot}_LIBRARY}")
+-    else()
+-        find_package(Boost
+-            COMPONENTS
+-                python
+-            REQUIRED
+-        )
+-    endif()
++    # USD builds only work with Python3
++    setup_python_package(Python3)
+ 
+     # --Jinja2
+     find_package(Jinja2)
+diff --git a/cmake/modules/FindTBB.cmake b/cmake/modules/FindTBB.cmake
+index 9bf69a022..73a9ceafb 100644
+--- a/cmake/modules/FindTBB.cmake
++++ b/cmake/modules/FindTBB.cmake
+@@ -197,7 +197,12 @@ if(NOT TBB_FOUND)
+   ##################################
+ 
+   if(TBB_INCLUDE_DIRS)
+-    file(READ "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h" _tbb_version_file)
++    # Use new oneTBB version header if it exists.
++    if(EXISTS "${TBB_INCLUDE_DIRS}/oneapi/tbb/version.h")
++      file(READ "${TBB_INCLUDE_DIRS}/oneapi/tbb/version.h" _tbb_version_file)
++    else()
++      file(READ "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h" _tbb_version_file)
++    endif()
+     string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
+         TBB_VERSION_MAJOR "${_tbb_version_file}")
+     string(REGEX REPLACE ".*#define TBB_VERSION_MINOR ([0-9]+).*" "\\1"
+diff --git a/pxr/base/gf/plane.h b/pxr/base/gf/plane.h
+index 61c731085..f4df8796e 100644
+--- a/pxr/base/gf/plane.h
++++ b/pxr/base/gf/plane.h
+@@ -32,6 +32,7 @@
+ #include "pxr/base/gf/api.h"
+ 
+ #include <iosfwd>
++#include <vector>
+ 
+ PXR_NAMESPACE_OPEN_SCOPE
+ 
+diff --git a/pxr/base/trace/concurrentList.h b/pxr/base/trace/concurrentList.h
+index 0337933a3..9825b6aaa 100644
+--- a/pxr/base/trace/concurrentList.h
++++ b/pxr/base/trace/concurrentList.h
+@@ -111,7 +111,6 @@ public:
+         while (curNode) {
+             Node* nodeToDelete = curNode;
+             curNode = curNode->next;
+-            _alloc.destroy(nodeToDelete);
+             _alloc.deallocate(nodeToDelete, 1);
+         }
+     }
+@@ -130,7 +129,7 @@ public:
+     /// the newly created item.
+     iterator Insert() {
+         Node* newNode = _alloc.allocate(1);
+-        _alloc.construct(newNode);
++        new(newNode) Node();
+ 
+         // Add the node to the linked list in an atomic manner.
+         do {
+diff --git a/pxr/base/work/detachedTask.h b/pxr/base/work/detachedTask.h
+index 876fee68c..b4b3023bb 100644
+--- a/pxr/base/work/detachedTask.h
++++ b/pxr/base/work/detachedTask.h
+@@ -41,7 +41,7 @@ struct Work_DetachedTask
+ {
+     explicit Work_DetachedTask(Fn &&fn) : _fn(std::move(fn)) {}
+     explicit Work_DetachedTask(Fn const &fn) : _fn(fn) {}
+-    void operator()() {
++    void operator()() const {
+         TfErrorMark m;
+         _fn();
+         m.Clear();
+diff --git a/pxr/base/work/dispatcher.cpp b/pxr/base/work/dispatcher.cpp
+index adba7dff3..289786491 100644
+--- a/pxr/base/work/dispatcher.cpp
++++ b/pxr/base/work/dispatcher.cpp
+@@ -32,27 +32,50 @@ WorkDispatcher::WorkDispatcher()
+         tbb::task_group_context::isolated,
+         tbb::task_group_context::concurrent_wait | 
+         tbb::task_group_context::default_traits)
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++        , _taskGroup(_context)
++#endif
+ {
+     _waitCleanupFlag.clear();
+     
++#if TBB_INTERFACE_VERSION_MAJOR < 12
+     // The concurrent_wait flag used with the task_group_context ensures
+     // the ref count will remain at 1 after all predecessor tasks are
+     // completed, so we don't need to keep resetting it in Wait().
+     _rootTask = new(tbb::task::allocate_root(_context)) tbb::empty_task;
+     _rootTask->set_ref_count(1);
++#endif
+ }
+ 
++
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++inline tbb::detail::d1::wait_context& 
++WorkDispatcher::_TaskGroup::_GetInternalWaitContext() {
++    return m_wait_ctx;
++}
++#endif
++
++
+ WorkDispatcher::~WorkDispatcher()
+ {
+     Wait();
++#if TBB_INTERFACE_VERSION_MAJOR < 12
+     tbb::task::destroy(*_rootTask);
++#endif
+ }
+ 
+ void
+ WorkDispatcher::Wait()
+ {
+     // Wait for tasks to complete.
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    // The native task_group::wait() has a comment saying its call to the
++    // context reset method is not thread safe. So we do our own
++    // synchronization to ensure it is called once.
++    tbb::detail::d1::wait(_taskGroup._GetInternalWaitContext(), _context);
++#else
+     _rootTask->wait_for_all();
++#endif
+ 
+     // If we take the flag from false -> true, we do the cleanup.
+     if (_waitCleanupFlag.test_and_set() == false) {
+@@ -73,7 +96,11 @@ WorkDispatcher::Wait()
+ void
+ WorkDispatcher::Cancel()
+ {
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    _taskGroup.cancel();
++#else
+     _context.cancel_group_execution();
++#endif
+ }
+ 
+ /* static */
+diff --git a/pxr/base/work/dispatcher.h b/pxr/base/work/dispatcher.h
+index 2c499d6ab..59ea72362 100644
+--- a/pxr/base/work/dispatcher.h
++++ b/pxr/base/work/dispatcher.h
+@@ -33,8 +33,15 @@
+ #include "pxr/base/tf/errorMark.h"
+ #include "pxr/base/tf/errorTransport.h"
+ 
++// Blocked range is not used in this file, but this header happens to pull in
++// the TBB version header in a way that works in all TBB versions.
++#include <tbb/blocked_range.h>
+ #include <tbb/concurrent_vector.h>
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++#include <tbb/task_group.h>
++#else
+ #include <tbb/task.h>
++#endif
+ 
+ #include <functional>
+ #include <type_traits>
+@@ -103,7 +110,11 @@ public:
+ 
+     template <class Callable>
+     inline void Run(Callable &&c) {
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++        _taskGroup.run(_InvokerTask<typename std::remove_reference<Callable>::type>(std::forward<Callable>(c), &_errors));
++#else
+         _rootTask->spawn(_MakeInvokerTask(std::forward<Callable>(c)));
++#endif
+     }
+ 
+     template <class Callable, class A0, class ... Args>
+@@ -136,6 +147,31 @@ private:
+     // Function invoker helper that wraps the invocation with an ErrorMark so we
+     // can transmit errors that occur back to the thread that Wait() s for tasks
+     // to complete.
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    template <class Fn>
++    struct _InvokerTask {
++        explicit _InvokerTask(Fn &&fn, _ErrorTransports *err) 
++            : _fn(std::move(fn)), _errors(err) {}
++
++        explicit _InvokerTask(Fn const &fn, _ErrorTransports *err) 
++            : _fn(fn), _errors(err) {}
++
++        // Ensure only moves happen, no copies.
++        _InvokerTask(_InvokerTask &&other) = default;
++        _InvokerTask(const _InvokerTask &other) = delete;
++        _InvokerTask &operator=(const _InvokerTask &other) = delete;
++
++        void operator()() const {
++            TfErrorMark m;
++            _fn();
++            if (!m.IsClean())
++                WorkDispatcher::_TransportErrors(m, _errors);
++        }
++    private:
++        Fn _fn;
++        _ErrorTransports *_errors;
++    };
++#else
+     template <class Fn>
+     struct _InvokerTask : public tbb::task {
+         explicit _InvokerTask(Fn &&fn, _ErrorTransports *err) 
+@@ -164,6 +200,8 @@ private:
+             _InvokerTask<typename std::remove_reference<Fn>::type>(
+                 std::forward<Fn>(fn), &_errors);
+     }
++#endif
++
+ 
+     // Helper function that removes errors from \p m and stores them in a new
+     // entry in \p errors.
+@@ -173,7 +211,20 @@ private:
+     // Task group context and associated root task that allows us to cancel
+     // tasks invoked directly by this dispatcher.
+     tbb::task_group_context _context;
++    #if TBB_INTERFACE_VERSION_MAJOR >= 12
++    // Custom task group that lets us implement thread safe concurrent wait.
++    class _TaskGroup : public tbb::task_group {
++    public:
++        _TaskGroup(tbb::task_group_context& ctx) : tbb::task_group(ctx) {}
++         inline tbb::detail::d1::wait_context& _GetInternalWaitContext();
++    };
++
++    _TaskGroup _taskGroup;
++#else
++    // Root task that allows us to cancel tasks invoked directly by this
++    // dispatcher.
+     tbb::empty_task* _rootTask;
++#endif
+ 
+     // The error transports we use to transmit errors in other threads back to
+     // this thread.
+diff --git a/pxr/base/work/threadLimits.cpp b/pxr/base/work/threadLimits.cpp
+index bc629b812..15d17e0f5 100644
+--- a/pxr/base/work/threadLimits.cpp
++++ b/pxr/base/work/threadLimits.cpp
+@@ -29,9 +29,18 @@
+ 
+ #include "pxr/base/tf/envSetting.h"
+ 
+-#include <tbb/task_scheduler_init.h>
++// Blocked range is not used in this file, but this header happens to pull in
++// the TBB version header in a way that works in all TBB versions.
++#include <tbb/blocked_range.h>
+ #include <tbb/task_arena.h>
+ 
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++#include <tbb/global_control.h>
++#include <tbb/info.h>
++#else
++#include <tbb/task_scheduler_init.h>
++#endif
++
+ #include <algorithm>
+ #include <atomic>
+ 
+@@ -58,16 +67,25 @@ TF_DEFINE_ENV_SETTING(
+ 
+ PXR_NAMESPACE_OPEN_SCOPE
+ 
+-// We create a task_scheduler_init instance at static initialization time if
+-// PXR_WORK_THREAD_LIMIT is set to a nonzero value.  Otherwise this stays NULL.
+-static tbb::task_scheduler_init *_tbbTaskSchedInit;
++// We create a global_control or task_scheduler_init instance at static
++// initialization time if PXR_WORK_THREAD_LIMIT is set to a nonzero value.
++// Otherwise this stays NULL.
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++static tbb::global_control *_tbbGlobalControl = nullptr;
++#else
++static tbb::task_scheduler_init *_tbbTaskSchedInit = nullptr;
++#endif
+ 
+ unsigned
+ WorkGetPhysicalConcurrencyLimit()
+ {
+     // Use TBB here, since it pays attention to the affinity mask on Linux and
+     // Windows.
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    return tbb::info::default_concurrency();
++#else
+     return tbb::task_scheduler_init::default_num_threads();
++#endif
+ }
+ 
+ // This function always returns an actual thread count >= 1.
+@@ -123,7 +141,12 @@ Work_InitializeThreading()
+     // previously initialized by the hosting environment (e.g. if we are running
+     // as a plugin to another application.)
+     if (settingVal) {
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++        _tbbGlobalControl = new tbb::global_control(
++            tbb::global_control::max_allowed_parallelism, threadLimit);
++#else
+         _tbbTaskSchedInit = new tbb::task_scheduler_init(threadLimit);
++#endif
+     }
+ }
+ static int _forceInitialization = (Work_InitializeThreading(), 0);
+@@ -153,6 +176,11 @@ WorkSetConcurrencyLimit(unsigned n)
+         threadLimit = WorkGetConcurrencyLimit();
+     }
+ 
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    delete _tbbGlobalControl;
++    _tbbGlobalControl = new tbb::global_control(
++        tbb::global_control::max_allowed_parallelism, threadLimit);
++#else
+     // Note that we need to do some performance testing and decide if it's
+     // better here to simply delete the task_scheduler_init object instead
+     // of re-initializing it.  If we decide that it's better to re-initialize
+@@ -168,6 +196,7 @@ WorkSetConcurrencyLimit(unsigned n)
+     } else {
+         _tbbTaskSchedInit = new tbb::task_scheduler_init(threadLimit);
+     }
++#endif
+ }
+ 
+ void 
+@@ -185,7 +214,17 @@ WorkSetConcurrencyLimitArgument(int n)
+ unsigned
+ WorkGetConcurrencyLimit()
+ {
++#if TBB_INTERFACE_VERSION_MAJOR >= 12
++    // The effective concurrency requires taking into account both the
++    // task_arena and internal thread pool size set by global_control.
++    // https://github.com/oneapi-src/oneTBB/issues/405
++    return std::min<unsigned>(
++        tbb::global_control::active_value(
++            tbb::global_control::max_allowed_parallelism), 
++        tbb::this_task_arena::max_concurrency());
++#else
+     return tbb::this_task_arena::max_concurrency();
++#endif
+ }
+ 
+ bool
+diff --git a/pxr/usd/pcp/mapExpression.cpp b/pxr/usd/pcp/mapExpression.cpp
+index 4ab6e669c..4b59488e2 100644
+--- a/pxr/usd/pcp/mapExpression.cpp
++++ b/pxr/usd/pcp/mapExpression.cpp
+@@ -238,7 +238,7 @@ PcpMapExpression::_Node::New( _Op op_,
+         // Check for existing instance to re-use
+         _NodeMap::accessor accessor;
+         if (_nodeRegistry->map.insert(accessor, key) ||
+-            accessor->second->_refCount.fetch_and_increment() == 0) {
++            accessor->second->_refCount++ == 0) {
+             // Either there was no node in the table, or there was but it had
+             // begun dying (another client dropped its refcount to 0).  We have
+             // to create a new node in the table.  When the client that is
+@@ -387,7 +387,7 @@ intrusive_ptr_add_ref(PcpMapExpression::_Node* p)
+ void
+ intrusive_ptr_release(PcpMapExpression::_Node* p)
+ {
+-    if (p->_refCount.fetch_and_decrement() == 1)
++    if (p->_refCount++ == 1)
+         delete p;
+ }
+ 
+diff --git a/pxr/usd/pcp/mapExpression.h b/pxr/usd/pcp/mapExpression.h
+index c91250a65..e61475ea5 100644
+--- a/pxr/usd/pcp/mapExpression.h
++++ b/pxr/usd/pcp/mapExpression.h
+@@ -30,7 +30,6 @@
+ 
+ #include <boost/intrusive_ptr.hpp>
+ 
+-#include <tbb/atomic.h>
+ #include <tbb/spin_mutex.h>
+ 
+ #include <atomic>
+@@ -265,7 +264,7 @@ private: // data
+         struct _NodeMap;
+         static TfStaticData<_NodeMap> _nodeRegistry;
+ 
+-        mutable tbb::atomic<int> _refCount;
++        mutable std::atomic<int> _refCount;
+         mutable Value _cachedValue;
+         mutable std::set<_Node*> _dependentExpressions;
+         Value _valueForVariable;
+diff --git a/pxr/usd/sdf/changeManager.cpp b/pxr/usd/sdf/changeManager.cpp
+index 9d55d29a3..a5f0df25a 100644
+--- a/pxr/usd/sdf/changeManager.cpp
++++ b/pxr/usd/sdf/changeManager.cpp
+@@ -34,7 +34,6 @@
+ #include "pxr/base/tf/instantiateSingleton.h"
+ #include "pxr/base/tf/stackTrace.h"
+ 
+-#include <tbb/atomic.h>
+ 
+ using std::string;
+ using std::vector;
+@@ -150,9 +149,9 @@ Sdf_ChangeManager::_ProcessRemoveIfInert(_Data *data)
+     TF_VERIFY(data->outermostBlock);
+ }
+ 
+-static tbb::atomic<size_t> &
++static std::atomic<size_t> &
+ _InitChangeSerialNumber() {
+-    static tbb::atomic<size_t> value;
++    static std::atomic<size_t> value;
+     value = 1;
+     return value;
+ }
+@@ -191,8 +190,8 @@ Sdf_ChangeManager::_SendNotices(_Data *data)
+     }
+ 
+     // Obtain a serial number for this round of change processing.
+-    static tbb::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
+-    size_t serialNumber = changeSerialNumber.fetch_and_increment();
++    static std::atomic<size_t> &changeSerialNumber = _InitChangeSerialNumber();
++    size_t serialNumber = changeSerialNumber++;
+ 
+     // Send global notice.
+     SdfNotice::LayersDidChange(changes, serialNumber).Send();
+diff --git a/pxr/usd/sdf/layer.cpp b/pxr/usd/sdf/layer.cpp
+index 6f5d2f696..d4eef25f1 100644
+--- a/pxr/usd/sdf/layer.cpp
++++ b/pxr/usd/sdf/layer.cpp
+@@ -214,7 +214,7 @@ SdfLayer::SdfLayer(
+     _MarkCurrentStateAsClean();
+ }
+ 
+-SdfLayer::~SdfLayer()
++SdfLayer::~SdfLayer() noexcept
+ {
+     TF_DEBUG(SDF_LAYER).Msg(
+         "SdfLayer::~SdfLayer('%s')\n", GetIdentifier().c_str());
+@@ -4079,8 +4079,7 @@ SdfLayer::_SetData(const SdfAbstractDataPtr &newData,
+         if (!updater.unrecognizedFields.empty()) {
+             vector<string> fieldDescrs;
+             fieldDescrs.reserve(updater.unrecognizedFields.size());
+-            for (std::pair<TfToken, SdfPath> const &tokenPath:
+-                     updater.unrecognizedFields) {
++            for (auto const &tokenPath: updater.unrecognizedFields) {
+                 fieldDescrs.push_back(
+                     TfStringPrintf("'%s' first seen at <%s>",
+                                    tokenPath.first.GetText(),
+diff --git a/pxr/usd/sdf/layer.h b/pxr/usd/sdf/layer.h
+index 8e04c7c07..b2d8bd860 100644
+--- a/pxr/usd/sdf/layer.h
++++ b/pxr/usd/sdf/layer.h
+@@ -98,7 +98,7 @@ class SdfLayer
+ public:
+     /// Destructor
+     SDF_API
+-    virtual ~SdfLayer(); 
++    virtual ~SdfLayer() noexcept; 
+ 
+     /// Noncopyable
+     SdfLayer(const SdfLayer&) = delete;
+diff --git a/pxr/usd/sdf/path.h b/pxr/usd/sdf/path.h
+index a0986d26d..e4577e000 100644
+--- a/pxr/usd/sdf/path.h
++++ b/pxr/usd/sdf/path.h
+@@ -306,9 +306,6 @@ public:
+     /// Constructs the default, empty path.
+     ///
+     SdfPath() noexcept {
+-        // This generates a single instruction instead of 2 on gcc 6.3.  Seems
+-        // to be fixed on gcc 7+ and newer clangs.  Remove when we're there!
+-        memset(this, 0, sizeof(*this));
+     }
+ 
+     /// Creates a path from the given string.
+diff --git a/pxr/usd/sdf/pathNode.cpp b/pxr/usd/sdf/pathNode.cpp
+index b923ba9dd..8989fdd89 100644
+--- a/pxr/usd/sdf/pathNode.cpp
++++ b/pxr/usd/sdf/pathNode.cpp
+@@ -62,7 +62,7 @@ static_assert(sizeof(Sdf_PrimPropertyPathNode) == 3 * sizeof(void *), "");
+ struct Sdf_PathNodePrivateAccess
+ {
+     template <class Handle>
+-    static inline tbb::atomic<unsigned int> &
++    static inline std::atomic<unsigned int> &
+     GetRefCount(Handle h) {
+         Sdf_PathNode const *p =
+             reinterpret_cast<Sdf_PathNode const *>(h.GetPtr());
+@@ -265,7 +265,7 @@ _FindOrCreate(Table &table,
+     if (iresult.second ||
+         (Table::NodeHandle::IsCounted &&
+          Access::GetRefCount(
+-             iresult.first->second).fetch_and_increment() == 0)) {
++             iresult.first->second)++ == 0)) {
+         // There was either no entry, or there was one but it had begun dying
+         // (another client dropped its refcount to 0).  We have to create a new
+         // entry in the table.  When the client that is deleting the other node
+diff --git a/pxr/usd/sdf/pathNode.h b/pxr/usd/sdf/pathNode.h
+index 1fdd1ba0d..8aa030e75 100644
+--- a/pxr/usd/sdf/pathNode.h
++++ b/pxr/usd/sdf/pathNode.h
+@@ -33,7 +33,6 @@
+ #include <boost/noncopyable.hpp>
+ #include <boost/intrusive_ptr.hpp>
+ 
+-#include <tbb/atomic.h>
+ 
+ PXR_NAMESPACE_OPEN_SCOPE
+ 
+@@ -311,7 +310,7 @@ private:
+     // Instance variables.  PathNode's size is important to keep small.  Please
+     // be mindful of that when making any changes here.
+     const Sdf_PathNodeConstRefPtr _parent;
+-    mutable tbb::atomic<unsigned int> _refCount;
++    mutable std::atomic<unsigned int> _refCount;
+ 
+     const short _elementCount;
+     const unsigned char _nodeType;
+@@ -751,7 +750,7 @@ inline void intrusive_ptr_add_ref(const PXR_NS::Sdf_PathNode* p) {
+     ++p->_refCount;
+ }
+ inline void intrusive_ptr_release(const PXR_NS::Sdf_PathNode* p) {
+-    if (p->_refCount.fetch_and_decrement() == 1)
++    if (p->_refCount-- == 1)
+         p->_Destroy();
+ }
+ 
+diff --git a/pxr/usd/usd/clipCache.cpp b/pxr/usd/usd/clipCache.cpp
+index 4e10b835b..ab26cb306 100644
+--- a/pxr/usd/usd/clipCache.cpp
++++ b/pxr/usd/usd/clipCache.cpp
+@@ -217,10 +217,9 @@ Usd_ClipCache::PopulateClipsForPrim(
+ 
+     const bool primHasClips = !allClips.empty();
+     if (primHasClips) {
+-        tbb::mutex::scoped_lock lock;
+-        if (_concurrentPopulationContext) {
+-            lock.acquire(_concurrentPopulationContext->_mutex);
+-        }
++        std::unique_lock<std::mutex> lock = (_concurrentPopulationContext) ?
++            std::unique_lock<std::mutex>(_concurrentPopulationContext->_mutex) :
++            std::unique_lock<std::mutex>();
+ 
+         // Find nearest ancestor with clips specified.
+         const std::vector<Usd_ClipSetRefPtr>* ancestralClips = nullptr;
+@@ -259,10 +258,10 @@ Usd_ClipCache::PopulateClipsForPrim(
+ SdfLayerHandleSet
+ Usd_ClipCache::GetUsedLayers() const
+ {
+-    tbb::mutex::scoped_lock lock;
+-    if (_concurrentPopulationContext) {
+-        lock.acquire(_concurrentPopulationContext->_mutex);
+-    }
++    std::unique_lock<std::mutex> lock = (_concurrentPopulationContext) ?
++            std::unique_lock<std::mutex>(_concurrentPopulationContext->_mutex) :
++            std::unique_lock<std::mutex>();
++
+     SdfLayerHandleSet layers;
+     for (_ClipTable::iterator::value_type const &clipsListIter : _table){
+         for (Usd_ClipSetRefPtr const &clipSet : clipsListIter.second){
+@@ -341,10 +340,9 @@ const std::vector<Usd_ClipSetRefPtr>&
+ Usd_ClipCache::GetClipsForPrim(const SdfPath& path) const
+ {
+     TRACE_FUNCTION();
+-    tbb::mutex::scoped_lock lock;
+-    if (_concurrentPopulationContext) {
+-        lock.acquire(_concurrentPopulationContext->_mutex);
+-    }
++    std::unique_lock<std::mutex> lock = (_concurrentPopulationContext) ?
++        std::unique_lock<std::mutex>(_concurrentPopulationContext->_mutex) :
++        std::unique_lock<std::mutex>();
+     return _GetClipsForPrim_NoLock(path);
+ }
+ 
+diff --git a/pxr/usd/usd/clipCache.h b/pxr/usd/usd/clipCache.h
+index 2bff0833a..bf954ca63 100644
+--- a/pxr/usd/usd/clipCache.h
++++ b/pxr/usd/usd/clipCache.h
+@@ -30,7 +30,6 @@
+ #include "pxr/usd/usd/clipSet.h"
+ #include "pxr/usd/sdf/pathTable.h"
+ 
+-#include <tbb/mutex.h>
+ #include <vector>
+ 
+ PXR_NAMESPACE_OPEN_SCOPE
+@@ -61,7 +60,7 @@ public:
+         explicit ConcurrentPopulationContext(Usd_ClipCache &cache);
+         ~ConcurrentPopulationContext();
+         Usd_ClipCache &_cache;
+-        tbb::mutex _mutex;
++        std::mutex _mutex;
+     };
+ 
+     /// Populate the cache with clips for \p prim. Returns true if clips
+diff --git a/pxr/usd/usd/crateData.cpp b/pxr/usd/usd/crateData.cpp
+index 9ba86701b..1d9e5a44c 100644
+--- a/pxr/usd/usd/crateData.cpp
++++ b/pxr/usd/usd/crateData.cpp
+@@ -804,16 +804,25 @@ private:
+                     
+             dispatcher.Run(
+                 [this, fsBegin, fsEnd, &fields, &fieldValuePairs]() mutable {
+-                    // XXX Won't need first two tags when bug #132031 is
+-                    // addressed
+-                    TfAutoMallocTag2 tag("Usd", "Usd_CrateDataImpl::Open");
+-                    TfAutoMallocTag tag2("field data");
+-                    auto &pairs = fieldValuePairs.GetMutable();
+-                    pairs.resize(fsEnd-fsBegin);
+-                    for (size_t i = 0; fsBegin != fsEnd; ++fsBegin, ++i) {
+-                        auto const &field = fields[fsBegin->value];
+-                        pairs[i].first = _crateFile->GetToken(field.tokenIndex);
+-                        pairs[i].second = _UnpackForField(field.valueRep);
++                    try{
++                        // XXX Won't need first two tags when bug #132031 is
++                        // addressed
++                        TfAutoMallocTag2 tag("Usd", "Usd_CrateDataImpl::Open");
++                        TfAutoMallocTag tag2("field data");
++                        auto &pairs = fieldValuePairs.GetMutable();
++                        pairs.resize(fsEnd-fsBegin);
++                        for (size_t i = 0; i < size_t(std::distance(fsBegin,fsEnd)); ++i) {
++                            auto const &field = fields[fsBegin[i].value];
++                            pairs[i].first = 
++                                _crateFile->GetToken(field.tokenIndex);
++                            pairs[i].second = _UnpackForField(field.valueRep);
++                        } 
++                    } catch (const std::exception &e){
++                        TF_RUNTIME_ERROR("Encountered exception: %s %s", 
++                            e.what(), _crateFile->GetAssetPath().c_str());
++
++                    } catch (...) {
++                        TF_RUNTIME_ERROR("Encountered unknown exception");
+                     }
+                 });
+         }
+diff --git a/pxr/usd/usd/crateFile.h b/pxr/usd/usd/crateFile.h
+index c8941d367..2a796a140 100644
+--- a/pxr/usd/usd/crateFile.h
++++ b/pxr/usd/usd/crateFile.h
+@@ -340,27 +340,19 @@ private:
+             explicit ZeroCopySource(
+                 CrateFile::_FileMapping *m, void const *addr, size_t numBytes);
+ 
+-            // XXX --------------------------------
+-            // Hack for tbb bug -- types in tbb::concurrent_unordered_set
+-            // must be copy constructible until version 2017 update 1.  Remove
+-            // this once we're on or past that version of tbb.
+-            ZeroCopySource(ZeroCopySource const &other)
+-                : Vt_ArrayForeignDataSource(other._detachedFn, other._refCount)
+-                , _mapping(other._mapping)
+-                , _addr(other._addr)
+-                , _numBytes(other._numBytes)
+-                {}
+-            // XXX --------------------------------
+-            
+             bool operator==(ZeroCopySource const &other) const;
+             bool operator!=(ZeroCopySource const &other) const {
+                 return !(*this == other);
+             }
+-            friend size_t tbb_hasher(ZeroCopySource const &z) {
+-                size_t seed = reinterpret_cast<uintptr_t>(z._addr);
+-                boost::hash_combine(seed, z._numBytes);
+-                return seed;
+-            }
++
++            struct Hash {
++                inline size_t operator()(const ZeroCopySource& z) const {
++                    return TfHash::Combine(
++                        reinterpret_cast<uintptr_t>(z._addr),
++                        z._numBytes
++                    );
++                }
++            };
+ 
+             // Return true if the refcount is nonzero.
+             bool IsInUse() const { return _refCount; }
+@@ -439,7 +431,8 @@ private:
+         ArchConstFileMapping _mapping;
+         char const *_start;
+         int64_t _length;
+-        tbb::concurrent_unordered_set<ZeroCopySource> _outstandingRanges;
++        tbb::concurrent_unordered_set<ZeroCopySource,
++            ZeroCopySource::Hash> _outstandingRanges;
+     };
+     using _FileMappingIPtr = boost::intrusive_ptr<_FileMapping>;
+ 

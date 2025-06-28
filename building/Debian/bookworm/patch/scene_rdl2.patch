@@ -1,0 +1,158 @@
+diff --git a/lib/render/util/Arena.h b/lib/render/util/Arena.h
+index 874887c..dd1f110 100644
+--- a/lib/render/util/Arena.h
++++ b/lib/render/util/Arena.h
+@@ -115,7 +115,7 @@ public:
+ 
+ protected:
+     size_t                mBlockSize;
+-    tbb::atomic<unsigned> mTotalBlocks;
++    std::atomic<unsigned> mTotalBlocks;
+ 
+     CACHE_ALIGN util::ConcurrentSList mFreeBlocks;
+ };
+diff --git a/lib/render/util/MiscUtils.h b/lib/render/util/MiscUtils.h
+index 7bf73d0..797308e 100644
+--- a/lib/render/util/MiscUtils.h
++++ b/lib/render/util/MiscUtils.h
+@@ -6,13 +6,13 @@
+ // Include this before any other includes!
+ #include <scene_rdl2/common/platform/Platform.h>
+ 
+-#include <tbb/atomic.h>
++#include <atomic>
+ 
+ namespace scene_rdl2 {
+ namespace util {
+ 
+ template<typename T>
+-struct CACHE_ALIGN CacheLineAtomic : public tbb::atomic<T>
++struct CACHE_ALIGN CacheLineAtomic : public std::atomic<T>
+ {
+ };
+ 
+diff --git a/lib/scene/rdl2/SceneContext.cc b/lib/scene/rdl2/SceneContext.cc
+index b630719..1e1a4d9 100644
+--- a/lib/scene/rdl2/SceneContext.cc
++++ b/lib/scene/rdl2/SceneContext.cc
+@@ -31,9 +31,9 @@
+ #include <scene_rdl2/render/logging/logging.h>
+ 
+ #include <tbb/concurrent_hash_map.h>
+-#include <tbb/mutex.h>
+ #include <tbb/parallel_for_each.h>
+ 
++#include <mutex>
+ #include <algorithm>
+ #include <cstddef>
+ #include <cstring>
+@@ -185,7 +185,7 @@ const rdl2::Camera*
+ SceneContext::getPrimaryCamera() const
+ {
+     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
+-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++    std::scoped_lock lock(mCreateSceneObjectMutex);
+ 
+     if (mCameras.size() == 0) {
+         return nullptr;
+@@ -205,7 +205,7 @@ std::vector<const rdl2::Camera*>
+ SceneContext::getCameras() const
+ {
+     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
+-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++    std::scoped_lock lock(mCreateSceneObjectMutex);
+ 
+     std::vector<const rdl2::Camera*> cameras;
+ 
+@@ -236,7 +236,7 @@ std::vector<const rdl2::Camera*>
+ SceneContext::getActiveCameras(void) const
+ {
+     // Prevent possible race condition with mCameras.push_back() in createSceneObject().
+-    tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++    std::scoped_lock lock(mCreateSceneObjectMutex);
+ 
+     std::vector<const rdl2::Camera*> cameras;
+ 
+@@ -447,16 +447,16 @@ SceneContext::createSceneObject(const std::string& className,
+ 
+         // Do any type-specific setup.
+         if (obj->isA<Geometry>()) {
+-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++            std::scoped_lock lock(mCreateSceneObjectMutex);
+             mGeometries.push_back(obj->asA<Geometry>());
+         } else if (obj->isA<GeometrySet>()) {
+-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++            std::scoped_lock lock(mCreateSceneObjectMutex);
+             mGeometrySets.push_back(obj->asA<GeometrySet>());
+         } else if (obj->isA<Camera>()) {
+-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++            std::scoped_lock lock(mCreateSceneObjectMutex);
+             mCameras.push_back(obj->asA<Camera>());
+         } else if (obj->isA<RenderOutput>()) {
+-            tbb::mutex::scoped_lock lock(mCreateSceneObjectMutex);
++            std::scoped_lock lock(mCreateSceneObjectMutex);
+             mRenderOutputs.push_back(obj->asA<RenderOutput>());
+         } 
+ 
+@@ -770,7 +770,7 @@ SceneContext::computeTimeRescalingCoeffs(float shutterOpen, float shutterClose,
+ {
+     // See declaration of TimeRescalingCoeffs in Types.h for details.
+ 
+-    tbb::mutex::scoped_lock lock(mTimeRescalingCoeffsMutex);
++    std::scoped_lock lock(mTimeRescalingCoeffsMutex);
+ 
+     MNRY_ASSERT_REQUIRE(motionSteps.size() >= 1 && motionSteps.size() <= 2);
+     if (motionSteps.size() == 1  ||  motionSteps[0] == motionSteps[1]) {
+diff --git a/lib/scene/rdl2/SceneContext.h b/lib/scene/rdl2/SceneContext.h
+index 530b324..f6fad6d 100644
+--- a/lib/scene/rdl2/SceneContext.h
++++ b/lib/scene/rdl2/SceneContext.h
+@@ -13,8 +13,8 @@
+ #include <scene_rdl2/render/util/Alloc.h>
+ #include <scene_rdl2/common/platform/Platform.h>
+ #include <tbb/concurrent_hash_map.h>
+-#include <tbb/mutex.h>
+ 
++#include <mutex>
+ #include <string>
+ 
+ namespace scene_rdl2 {
+@@ -382,7 +382,7 @@ private:
+     // it's being updated. In other words, doing an interpolated get() against
+     // ANY object while the camera's shutter interval or SceneVariables motion
+     // steps are being updated is a recipe for threading errors.
+-    tbb::mutex mTimeRescalingCoeffsMutex;
++    std::mutex mTimeRescalingCoeffsMutex;
+ 
+     // All cameras in the rdl context (including the primary camera).
+     // This is in creation order.  The primary camera can't be assumed to be
+@@ -414,7 +414,7 @@ private:
+     // Mutex to sync write access to thread unsafe vectors like mGeometries only in
+     // conditioning time. Those vectors will remain lock free for reading and reading / writing
+     // at the same time is not allowed or protected in any way
+-    mutable tbb::mutex mCreateSceneObjectMutex;
++    mutable std::mutex mCreateSceneObjectMutex;
+ 
+     RenderOutputVector mRenderOutputs;
+     std::string mDsoPath;
+diff --git a/tests/lib/render/util/TestMemPool.cc b/tests/lib/render/util/TestMemPool.cc
+index ff12bcd..e169189 100644
+--- a/tests/lib/render/util/TestMemPool.cc
++++ b/tests/lib/render/util/TestMemPool.cc
+@@ -211,14 +211,14 @@ typedef uint64_t EntryType;
+ typedef MemPool<EntryType> LocalMemPool;
+ 
+ // Counter to hand out unique indices to TLSProxy objects.
+-tbb::atomic<unsigned> gNextTLSIndex;
++std::atomic<unsigned> gNextTLSIndex;
+ 
+ // This is a lightweight object which we put into a tbb::enumerable_thread_specific
+ // container so that we can map OS thread ids to consistent top level ThreadLocalState
+ // objects when running parallel_for loops in the update phase of the frame.
+ struct TLSProxy
+ {
+-    TLSProxy() : mTLSIndex(gNextTLSIndex.fetch_and_increment()) {}
++    TLSProxy() : mTLSIndex(gNextTLSIndex++) {}
+     unsigned mTLSIndex;
+ };
+ 

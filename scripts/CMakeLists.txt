@@ -10,3 +10,5 @@ install(FILES macOS/setupHoudini.sh
 install(FILES Rocky9/setupHoudini.sh
     DESTINATION scripts/Rocky9)
 
+install(FILES Debian/setupHoudini.sh
+    DESTINATION scripts/Debian)

@@ -1,0 +1,208 @@
+diff --git a/cmd/hd_cmd/hd_render/OutputFile.h b/cmd/hd_cmd/hd_render/OutputFile.h
+index c3094ec..cc403d1 100644
+--- a/cmd/hd_cmd/hd_render/OutputFile.h
++++ b/cmd/hd_cmd/hd_render/OutputFile.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderBuffer.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_render/RenderSettings.h b/cmd/hd_cmd/hd_render/RenderSettings.h
+index 25ae696..e383f8d 100644
+--- a/cmd/hd_cmd/hd_render/RenderSettings.h
++++ b/cmd/hd_cmd/hd_render/RenderSettings.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderDelegate.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_render/SceneDelegate.h b/cmd/hd_cmd/hd_render/SceneDelegate.h
+index c326914..deaf2a3 100644
+--- a/cmd/hd_cmd/hd_render/SceneDelegate.h
++++ b/cmd/hd_cmd/hd_render/SceneDelegate.h
+@@ -6,7 +6,6 @@
+ #pragma once
+ 
+ #include "FreeCamera.h"
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sceneDelegate.h>
+ namespace hd_render {
+ 
+diff --git a/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h b/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
+index 0bbc374..538a494 100644
+--- a/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
++++ b/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderDelegate.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h b/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
+index f657f17..39301ed 100644
+--- a/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
++++ b/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
+@@ -6,7 +6,6 @@
+ #pragma once
+ 
+ #include "FreeCamera.h"
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sceneDelegate.h>
+ namespace hd_usd2rdl {
+ 
+diff --git a/lib/hydramoonray/Camera.h b/lib/hydramoonray/Camera.h
+index 702add6..d9a102c 100644
+--- a/lib/hydramoonray/Camera.h
++++ b/lib/hydramoonray/Camera.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/camera.h>
+ namespace scene_rdl2 {namespace rdl2 { class Camera; } }
+ 
+diff --git a/lib/hydramoonray/CoordSys.h b/lib/hydramoonray/CoordSys.h
+index 112a0d7..7f11776 100644
+--- a/lib/hydramoonray/CoordSys.h
++++ b/lib/hydramoonray/CoordSys.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/coordSys.h>
+ 
+ namespace scene_rdl2 {namespace rdl2 { class SceneObject; } }
+diff --git a/lib/hydramoonray/Instancer.h b/lib/hydramoonray/Instancer.h
+index 9d7603f..448469b 100644
+--- a/lib/hydramoonray/Instancer.h
++++ b/lib/hydramoonray/Instancer.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/instancer.h>
+ #include <pxr/base/gf/matrix4f.h>
+ #include <pxr/base/tf/hashmap.h>
+diff --git a/lib/hydramoonray/Light.h b/lib/hydramoonray/Light.h
+index fd44be6..699284a 100644
+--- a/lib/hydramoonray/Light.h
++++ b/lib/hydramoonray/Light.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/light.h>
+ 
+ #include <scene_rdl2/scene/rdl2/Types.h>
+diff --git a/lib/hydramoonray/LightFilter.h b/lib/hydramoonray/LightFilter.h
+index a4a19bc..80d9e7f 100644
+--- a/lib/hydramoonray/LightFilter.h
++++ b/lib/hydramoonray/LightFilter.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sprim.h>
+ #include <pxr/imaging/hd/material.h>
+ #include <scene_rdl2/scene/rdl2/LightFilter.h>
+diff --git a/lib/hydramoonray/Material.h b/lib/hydramoonray/Material.h
+index c5e33bc..078dc09 100644
+--- a/lib/hydramoonray/Material.h
++++ b/lib/hydramoonray/Material.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/material.h>
+ #include <pxr/imaging/hd/rprim.h>
+ 
+diff --git a/lib/hydramoonray/RenderBuffer.h b/lib/hydramoonray/RenderBuffer.h
+index c2ffef5..6cee1f7 100644
+--- a/lib/hydramoonray/RenderBuffer.h
++++ b/lib/hydramoonray/RenderBuffer.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderBuffer.h>
+ #include <pxr/imaging/hd/aov.h>
+ #include <pxr/base/gf/vec4f.h>
+diff --git a/lib/hydramoonray/ValueConverter.h b/lib/hydramoonray/ValueConverter.h
+index 12adbb5..73d9d20 100644
+--- a/lib/hydramoonray/ValueConverter.h
++++ b/lib/hydramoonray/ValueConverter.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/base/gf/vec2f.h>
+ #include <pxr/base/gf/vec2d.h>
+ #include <pxr/base/gf/vec3f.h>
+diff --git a/plugin/adapters/GeometryLightAdapter.h b/plugin/adapters/GeometryLightAdapter.h
+index 402b1be..4a6ad53 100644
+--- a/plugin/adapters/GeometryLightAdapter.h
++++ b/plugin/adapters/GeometryLightAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include "pxr/pxr.h"
+ 
+ #include "pxr/usdImaging/usdImaging/lightAdapter.h"
+diff --git a/plugin/adapters/MoonrayLightFilterAdapter.h b/plugin/adapters/MoonrayLightFilterAdapter.h
+index fd28dbd..642bbd9 100644
+--- a/plugin/adapters/MoonrayLightFilterAdapter.h
++++ b/plugin/adapters/MoonrayLightFilterAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include "pxr/pxr.h"
+ 
+ #include "pxr/usdImaging/usdImaging/lightFilterAdapter.h"
+diff --git a/plugin/adapters/ProceduralAdapter.h b/plugin/adapters/ProceduralAdapter.h
+index 9ca7f3b..348c0fd 100644
+--- a/plugin/adapters/ProceduralAdapter.h
++++ b/plugin/adapters/ProceduralAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include <pxr/pxr.h>
+ #include "pxr/usdImaging/usdImaging/api.h"
+ #include "pxr/usdImaging/usdImaging/primAdapter.h"
+diff --git a/plugin/hd_moonray_debug/RendererPlugin.cc b/plugin/hd_moonray_debug/RendererPlugin.cc
+index 36f713d..42205f0 100644
+--- a/plugin/hd_moonray_debug/RendererPlugin.cc
++++ b/plugin/hd_moonray_debug/RendererPlugin.cc
+@@ -44,7 +44,7 @@ public:
+     }
+ 
+ #if PXR_VERSION >= 2302
+-    bool IsSupported(bool gpuEnabled = true) const override {
++bool IsSupported(bool gpuEnabled = true) const override {
+         return true;
+     }
+ #else

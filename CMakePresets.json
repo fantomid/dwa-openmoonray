@@ -3,6 +3,7 @@
     "include": [
             "CMakeDWAPresets.json",
             "CMakeLinuxPresets.json",
+            "CMakeDebianPresets.json",
             "CMakeMacOSPresets.json"
     ]
 }

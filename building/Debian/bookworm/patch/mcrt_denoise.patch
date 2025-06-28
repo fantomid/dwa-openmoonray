@@ -1,0 +1,12 @@
+diff --git a/lib/denoiser/OptixDenoiserImpl.cc b/lib/denoiser/OptixDenoiserImpl>
+index df8c82a..7358ef6 100644
+--- a/lib/denoiser/OptixDenoiserImpl.cc
++++ b/lib/denoiser/OptixDenoiserImpl.cc
+@@ -9,6 +9,8 @@
+ #include <iostream>
+ #include <string.h>
+
++#define OPTIX_DENOISER_ALPHA_MODE_COPY 0
++
+ namespace moonray {
+ namespace denoiser {
