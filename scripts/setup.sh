@@ -8,7 +8,7 @@ omr_root="$(realpath ${sourcedir}/..)"
 
 # Walk up to find the top-level install dir where the dependencies are installed
 install_root=${omr_root}
-while [ "$(basename ${install_root})" != "installs" ]
+while [ "$(basename ${install_root})" != "DreamWorksAnimation" ]
 do
     install_root=$(dirname ${install_root})
 done
@@ -20,7 +20,7 @@ echo "Setting up release in ${omr_root}"
 export PATH=${omr_root}/bin:${PATH}
 
 # need python modules for the USD interface
-export PYTHONPATH=${install_root}/lib/python:/usr/local/lib/python:${PYTHONPATH}
+export PYTHONPATH=${install_root}/lib/python3.11:/usr/local/lib/python:${PYTHONPATH}
 
 
 # tell moonray where to find dsos

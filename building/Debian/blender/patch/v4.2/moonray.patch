@@ -1,0 +1,1497 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 648c71f..f1dc510 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -110,18 +110,17 @@ if(TARGET OpenEXR::IlmImfUtil)
+     set(OPENEXROPENEXR OpenEXR::IlmImf)
+     set(IMATHIMATH IlmBase::Imath IlmBase::Half)
+ else()
+-    set(OPENEXRUTIL OpenEXR::OpenEXRUtil)
+-    set(OPENEXRIEX OpenEXR::Iex)
+-    set(OPENEXRILMTHREAD OpenEXR::IlmThread)
+-    set(OPENEXROPENEXR OpenEXR::OpenEXR)
+-    set(IMATHIMATH Imath::Imath)
++    set(OPENEXRUTIL ${OpenEXR_OpenEXRUtil_LIBRARY_RELEASE})
++    set(OPENEXRIEX ${OpenEXR_Iex_LIBRARY_RELEASE})
++    set(OPENEXRILMTHREAD ${OpenEXR_IlmThread_LIBRARY_RELEASE})
++    set(OPENEXROPENEXR ${OpenEXR_OpenEXR_LIBRARY_RELEASE})
++    set(IMATHIMATH ${OpenEXR_Imath_LIBRARY_RELEASE})
+ endif()
+ find_package(OpenVDB REQUIRED)
+ find_package(OpenSubDiv REQUIRED)
+ find_package(Embree 4.2 REQUIRED)
+ find_package(OpenImageIO REQUIRED)
+ find_package(Random123 REQUIRED)
+-find_package(OpenImageIO REQUIRED)
+ find_package(TBB REQUIRED)
+ # Intel Math Kernel is not required by Moonray itself, but currently it has to
+ # be linked into the application if any dsos require it. Therefore we link it
+diff --git a/cmd/brdf_cmd/brdf_integrate/main.cc b/cmd/brdf_cmd/brdf_integrate/main.cc
+index 16fbbbd..ecc142d 100644
+--- a/cmd/brdf_cmd/brdf_integrate/main.cc
++++ b/cmd/brdf_cmd/brdf_integrate/main.cc
+@@ -71,7 +71,7 @@ static const int sTaskCount = 1;
+ // This gives the scheduler enough granularity to load balance well, but not
+ // too much that it causes contention on the atomics / mutexes at the end of
+ // each task
+-static const int sTaskCount = tbb::task_scheduler_init::default_num_threads() * 4;
++static const int sTaskCount = std::thread::hardware_concurrency() * 4;
+ #endif
+ 
+ 
+@@ -93,10 +93,10 @@ public:
+     const BsdfFactory &bsdfFactory;
+     const scene_rdl2::math::ReferenceFrame &frame;
+ 
+-    static tbb::mutex sMutex;
++    static std::mutex sMutex;
+ };
+ 
+-tbb::mutex TaskSettings::sMutex;
++std::mutex TaskSettings::sMutex;
+ 
+ 
+ struct EvalBsdfIntegralTask {
+diff --git a/cmd/denoise_cmd/CMakeLists.txt b/cmd/denoise_cmd/CMakeLists.txt
+index 4a0f81e..2d7fe0f 100644
+--- a/cmd/denoise_cmd/CMakeLists.txt
++++ b/cmd/denoise_cmd/CMakeLists.txt
+@@ -12,11 +12,12 @@ target_sources(${target}
+ 
+ target_link_libraries(${target}
+     PRIVATE
+-        ${PROJECT_NAME}::rendering_rndr      
+         McrtDenoise::denoiser  
+         SceneRdl2::render_logging
+         SceneRdl2::render_util
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
++        OpenImageIO_Util
++        "$<LINK_GROUP:RESCAN,${PROJECT_NAME}::rendering_pbr,${PROJECT_NAME}::rendering_rt,${PROJECT_NAME}::rendering_rndr>"
+ )
+ 
+ # Set standard compile/link options
+diff --git a/cmd/denoise_cmd/main.cc b/cmd/denoise_cmd/main.cc
+index 354e07b..b02872f 100644
+--- a/cmd/denoise_cmd/main.cc
++++ b/cmd/denoise_cmd/main.cc
+@@ -64,7 +64,13 @@ readImage(const std::string &filename, scene_rdl2::fb_util::RenderBuffer *buffer
+ 
+     std::vector<float> tmpBuffer(imageSpec.width * imageSpec.height * 4);
+ 
+-    if (!in->read_image(OIIO::TypeDesc::FLOAT, tmpBuffer.data())) {
++    if (!in->read_image(
++        in->current_subimage(),
++        in->current_miplevel(),
++        0, -1,
++        OIIO::TypeDesc::FLOAT, 
++        tmpBuffer.data()
++    )) {
+         throw scene_rdl2::except::IoError("Cannot read image file: \"" + filename +
+                   "\" (" + in->geterror() + ")");
+     }
+diff --git a/cmd/raas_cmd/moonray/CMakeLists.txt b/cmd/raas_cmd/moonray/CMakeLists.txt
+index 14d9c8b..9e24029 100644
+--- a/cmd/raas_cmd/moonray/CMakeLists.txt
++++ b/cmd/raas_cmd/moonray/CMakeLists.txt
+@@ -16,6 +16,11 @@ if (NOT IsDarwinPlatform)
+     set(PlatformSpecificLibs atomic)
+ endif()
+ 
++target_include_directories(${target}
++    PRIVATE
++        ${IMATH_INCLUDE_DIRS}/Imath
++)
++
+ target_link_libraries(${target}
+     PRIVATE
+         ${PROJECT_NAME}::application
+@@ -25,7 +30,8 @@ target_link_libraries(${target}
+         ${PROJECT_NAME}::rendering_shading
+         SceneRdl2::render_util
+         SceneRdl2::scene_rdl2
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
++        OpenImageIO_Util
+         ${MKL}
+         ${PlatformSpecificLibs}
+ )
+diff --git a/dso/displayfilter/ImageDisplayFilter/CMakeLists.txt b/dso/displayfilter/ImageDisplayFilter/CMakeLists.txt
+index 5bf26b7..6e5e22f 100644
+--- a/dso/displayfilter/ImageDisplayFilter/CMakeLists.txt
++++ b/dso/displayfilter/ImageDisplayFilter/CMakeLists.txt
+@@ -4,6 +4,6 @@
+ moonray_ispc_dso(ImageDisplayFilter
+     DEPENDENCIES
+         Moonray::rendering_displayfilter
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         SceneRdl2::common_math
+         SceneRdl2::scene_rdl2)
+diff --git a/dso/map/Image/ImageMap.cc b/dso/map/Image/ImageMap.cc
+index 11b2f48..7c61e20 100644
+--- a/dso/map/Image/ImageMap.cc
++++ b/dso/map/Image/ImageMap.cc
+@@ -84,8 +84,8 @@ ImageMap::ImageMap(const scene_rdl2::rdl2::SceneClass &sceneClass, const std::st
+     // to allow for the possibility that we may someday create these maps
+     // on multiple threads, we'll protect the writes of the class statics
+     // with a mutex.
+-    static tbb::mutex errorMutex;
+-    tbb::mutex::scoped_lock lock(errorMutex);
++    static std::mutex errorMutex;
++    std::scoped_lock lock(errorMutex);
+     MOONRAY_START_THREADSAFE_STATIC_WRITE
+     sStaticImageMapData.sErrorInvalidUdimCoord =
+         sLogEventRegistry.createEvent(scene_rdl2::logging::ERROR_LEVEL,
+diff --git a/dso/map/UsdUVTexture/UsdUVTexture.cc b/dso/map/UsdUVTexture/UsdUVTexture.cc
+index f588a84..fa57b10 100644
+--- a/dso/map/UsdUVTexture/UsdUVTexture.cc
++++ b/dso/map/UsdUVTexture/UsdUVTexture.cc
+@@ -54,8 +54,8 @@ UsdUVTexture::UsdUVTexture(const scene_rdl2::rdl2::SceneClass &sceneClass, const
+     // to allow for the possibility that we may someday create these maps
+     // on multiple threads, we'll protect the writes of the class statics
+     // with a mutex.
+-    static tbb::mutex errorMutex;
+-    tbb::mutex::scoped_lock lock(errorMutex);
++    static std::mutex errorMutex;
++    std::scoped_lock lock(errorMutex);
+     MOONRAY_START_THREADSAFE_STATIC_WRITE
+     sStaticUsdUVTextureData.sErrorInvalidUdimCoord =
+         sLogEventRegistry.createEvent(scene_rdl2::logging::ERROR_LEVEL,
+diff --git a/lib/common/file_resource/CMakeLists.txt b/lib/common/file_resource/CMakeLists.txt
+index 71a2e4e..acd1d21 100644
+--- a/lib/common/file_resource/CMakeLists.txt
++++ b/lib/common/file_resource/CMakeLists.txt
+@@ -32,7 +32,7 @@ target_link_libraries(${component}
+     PRIVATE
+         Boost::headers
+     PUBLIC
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         SceneRdl2::common_except
+         SceneRdl2::render_logging
+         SceneRdl2::render_util
+diff --git a/lib/common/mcrt_util/MutexPool2D.h b/lib/common/mcrt_util/MutexPool2D.h
+index f0487e7..54016f8 100644
+--- a/lib/common/mcrt_util/MutexPool2D.h
++++ b/lib/common/mcrt_util/MutexPool2D.h
+@@ -8,7 +8,6 @@
+ #include <scene_rdl2/common/platform/Platform.h>
+ #include <scene_rdl2/render/util/BitUtils.h>
+ 
+-#include <tbb/mutex.h>
+ 
+ namespace moonray {
+     constexpr int getMutexCount(int log2MutexCount)
+@@ -55,7 +54,7 @@ namespace moonray {
+     }
+ #endif
+ 
+-    template <int sLog2MutexCount, typename MutexType = tbb::mutex>
++    template <int sLog2MutexCount, typename MutexType = std::mutex>
+     class MutexPool2D
+     {
+     public:
+diff --git a/lib/common/mcrt_util/ProcessStats.h b/lib/common/mcrt_util/ProcessStats.h
+index 60aed7a..068311d 100644
+--- a/lib/common/mcrt_util/ProcessStats.h
++++ b/lib/common/mcrt_util/ProcessStats.h
+@@ -8,12 +8,11 @@
+ #include <scene_rdl2/common/platform/Platform.h>
+ #include <scene_rdl2/render/logging/logging.h>
+ 
+-#include <tbb/mutex.h>
+-
+ #include <fstream>
+ #include <iomanip>
+ #include <iostream>
+ #include <string>
++#include <mutex>
+ 
+ namespace moonray {
+ namespace util {
+@@ -49,9 +48,9 @@ private:
+     // ifstream mutex to prevent corrupt reads
+     // when we are getting log messages from
+     // threaded sections of code
+-    mutable tbb::mutex mMemoryReadMutex;
+-    mutable tbb::mutex mReadIOMutex;
+-    mutable tbb::mutex mSystemUtilMutex;
++    mutable std::mutex mMemoryReadMutex;
++    mutable std::mutex mReadIOMutex;
++    mutable std::mutex mSystemUtilMutex;
+ 
+ };
+ 
+diff --git a/lib/deepfile/CMakeLists.txt b/lib/deepfile/CMakeLists.txt
+index ba6bab2..72a5285 100644
+--- a/lib/deepfile/CMakeLists.txt
++++ b/lib/deepfile/CMakeLists.txt
+@@ -6,6 +6,9 @@ set(component deepfile)
+ set(installIncludeDir ${PACKAGE_NAME}/deepfile)
+ set(exportGroup ${PROJECT_NAME}Targets)
+ 
++find_package(OpenEXR REQUIRED)
++find_package(Imath REQUIRED)
++
+ add_library(${component} SHARED "")
+ add_library(Moonray::${component} ALIAS ${component})
+ 
+@@ -41,6 +44,9 @@ target_include_directories(${component}
+     PUBLIC
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include>
++    PRIVATE
++        ${OpenEXR_INCLUDE_DIRS}
++        ${IMATH_INCLUDE_DIRS}/Imath
+ )
+ 
+ target_link_libraries(${component}
+diff --git a/lib/rendering/bvh/shading/AttributeKey.cc b/lib/rendering/bvh/shading/AttributeKey.cc
+index 235e4e6..8723027 100644
+--- a/lib/rendering/bvh/shading/AttributeKey.cc
++++ b/lib/rendering/bvh/shading/AttributeKey.cc
+@@ -8,7 +8,7 @@ using namespace scene_rdl2;
+ namespace moonray {
+ namespace shading {
+ 
+-tbb::mutex AttributeKey::sRegisterMutex;
++std::mutex AttributeKey::sRegisterMutex;
+ std::vector<std::string> AttributeKey::sKeyNames;
+ std::vector<AttributeType> AttributeKey::sKeyTypes;
+ std::vector<size_t> AttributeKey::sKeySizes;
+diff --git a/lib/rendering/bvh/shading/AttributeKey.h b/lib/rendering/bvh/shading/AttributeKey.h
+index f14459f..4f55abc 100644
+--- a/lib/rendering/bvh/shading/AttributeKey.h
++++ b/lib/rendering/bvh/shading/AttributeKey.h
+@@ -9,7 +9,8 @@
+ #pragma once
+ 
+ #include <scene_rdl2/scene/rdl2/Types.h>
+-#include <tbb/mutex.h>
++
++#include <mutex>
+ #include <unordered_set>
+ #include <map>
+ 
+@@ -93,7 +94,7 @@ protected:
+     static finline bool hasDerivatives(AttributeKey key);
+ 
+ private:
+-    static tbb::mutex sRegisterMutex;
++    static std::mutex sRegisterMutex;
+     static std::vector<std::string> sKeyNames;
+     static std::vector<AttributeType> sKeyTypes;
+     static std::vector<size_t> sKeySizes;
+@@ -283,7 +284,7 @@ AttributeKey::requestDerivatives() const
+         return false;
+     }
+     {
+-        tbb::mutex::scoped_lock lock(sRegisterMutex);
++        std::scoped_lock lock(sRegisterMutex);
+         sHasDerivatives[mIndex] = 1;
+     }
+     return true;
+@@ -316,7 +317,7 @@ AttributeKey::insertKey(const std::string &name, bool requestDerivatives)
+     std::pair<std::string, AttributeType> lookup(name, type);
+     int index = -1;
+     {
+-        tbb::mutex::scoped_lock lock(sRegisterMutex);
++        std::scoped_lock lock(sRegisterMutex);
+         auto it = sTable.find(lookup);
+         if (it == sTable.end()) {
+             index = static_cast<int>(sKeyNames.size());
+diff --git a/lib/rendering/bvh/shading/ShadingTLState.cc b/lib/rendering/bvh/shading/ShadingTLState.cc
+index 09206ff..68cdd9f 100644
+--- a/lib/rendering/bvh/shading/ShadingTLState.cc
++++ b/lib/rendering/bvh/shading/ShadingTLState.cc
+@@ -3,7 +3,8 @@
+ 
+ #include "ShadingTLState.h"
+ #include <moonray/common/mcrt_macros/moonray_static_check.h>
+-#include <tbb/mutex.h>
++
++#include <mutex>
+ 
+ namespace ispc {
+ extern "C" uint32_t ShadingTLState_hudValidation(bool);
+@@ -33,7 +34,7 @@ struct Private
+ };
+ 
+ Private gPrivate;
+-tbb::mutex gInitMutex;
++std::mutex gInitMutex;
+ 
+ void
+ initPrivate(const mcrt_common::TLSInitParams &initParams)
+@@ -71,7 +72,7 @@ TLState::~TLState()
+ 
+     {
+         // Protect against races the during gPrivate clean up.
+-        //tbb::mutex::scoped_lock lock(gInitMutex);
++        //std::scoped_lock lock(gInitMutex);
+ 
+         MOONRAY_THREADSAFE_STATIC_WRITE(--gPrivate.mRefCount);
+         if (gPrivate.mRefCount == 0) {
+@@ -97,7 +98,7 @@ TLState::allocTls(mcrt_common::ThreadLocalState *tls,
+ {
+     {
+         // Protect against races the very first time we initialize gPrivate.
+-        tbb::mutex::scoped_lock lock(gInitMutex);
++        std::scoped_lock lock(gInitMutex);
+ 
+         if (gPrivate.mRefCount == 0) {
+             texture::TLState::initPrivate(initParams);
+diff --git a/lib/rendering/geom/CMakeLists.txt b/lib/rendering/geom/CMakeLists.txt
+index 645626d..f1c71bd 100644
+--- a/lib/rendering/geom/CMakeLists.txt
++++ b/lib/rendering/geom/CMakeLists.txt
+@@ -106,8 +106,8 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        embree
+-        OpenImageIO::OpenImageIO
++        embree4
++        OpenImageIO
+         OpenSubDiv::OpenSubDiv
+         OpenVDB::OpenVDB
+         ${PROJECT_NAME}::common_file_resource
+diff --git a/lib/rendering/geom/Procedural.cc b/lib/rendering/geom/Procedural.cc
+index 38ed206..3b489f5 100644
+--- a/lib/rendering/geom/Procedural.cc
++++ b/lib/rendering/geom/Procedural.cc
+@@ -14,7 +14,7 @@
+ #include <moonray/rendering/geom/PrimitiveGroup.h>
+ #include <moonray/rendering/geom/PrimitiveVisitor.h>
+ 
+-#include <tbb/atomic.h>
++#include <atomic>
+ 
+ #include <numeric>
+ 
+diff --git a/lib/rendering/geom/Procedural.h b/lib/rendering/geom/Procedural.h
+index c3f07e8..464b08e 100644
+--- a/lib/rendering/geom/Procedural.h
++++ b/lib/rendering/geom/Procedural.h
+@@ -29,11 +29,18 @@ namespace geom {
+ struct GeometryStatistics {
+     GeometryStatistics() : mFaceCount(0), mMeshVertexCount(0), mCurvesCount(0), mCVCount(0), mInstanceCount(0) {}
+ 
+-    Primitive::size_type mFaceCount;
+-    Primitive::size_type mMeshVertexCount;
+-    Primitive::size_type mCurvesCount;
+-    Primitive::size_type mCVCount;
+-    Primitive::size_type mInstanceCount;
++    GeometryStatistics(const GeometryStatistics &other):
++        mFaceCount(other.mFaceCount.load()),
++        mMeshVertexCount(other.mMeshVertexCount.load()),
++        mCurvesCount(other.mCurvesCount.load()),
++        mCVCount(other.mCVCount.load()),
++        mInstanceCount(other.mInstanceCount.load()) {}
++
++    std::atomic<Primitive::size_type> mFaceCount;
++    std::atomic<Primitive::size_type> mMeshVertexCount;
++    std::atomic<Primitive::size_type> mCurvesCount;
++    std::atomic<Primitive::size_type> mCVCount;
++    std::atomic<Primitive::size_type> mInstanceCount;
+ };
+ 
+ //----------------------------------------------------------------------------
+diff --git a/lib/rendering/lpe/CMakeLists.txt b/lib/rendering/lpe/CMakeLists.txt
+index 2c7b83c..a4db935 100644
+--- a/lib/rendering/lpe/CMakeLists.txt
++++ b/lib/rendering/lpe/CMakeLists.txt
+@@ -69,7 +69,7 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         SceneRdl2::scene_rdl2
+ )
+ 
+diff --git a/lib/rendering/lpe/osl/automata.h b/lib/rendering/lpe/osl/automata.h
+index a404c83..9bc16b8 100644
+--- a/lib/rendering/lpe/osl/automata.h
++++ b/lib/rendering/lpe/osl/automata.h
+@@ -51,12 +51,12 @@ OSL_NAMESPACE_ENTER
+ // General container for integer sets
+ typedef std::set<int> IntSet; // probably faster to test for equality, unions and so
+ 
+-typedef std::unordered_set<ustring, ustringHash> SymbolSet;
++typedef std::unordered_set<ustring> SymbolSet;
+ // This is for the transition table used in DfAutomata::State
+-typedef std::unordered_map<ustring, int, ustringHash> SymbolToInt;
++typedef std::unordered_map<ustring, int> SymbolToInt;
+ // And this is for the transition table in NdfAutomata which
+ // has several movements for each symbol
+-typedef std::unordered_map<ustring, IntSet, ustringHash> SymbolToIntList;
++typedef std::unordered_map<ustring, IntSet> SymbolToIntList;
+ typedef std::unordered_map<int, int> HashIntInt;
+ 
+ // For the rules in the deterministic states, we don't need a real set
+diff --git a/lib/rendering/lpe/osl/oslconfig.h b/lib/rendering/lpe/osl/oslconfig.h
+index 94e90a0..94eebb0 100644
+--- a/lib/rendering/lpe/osl/oslconfig.h
++++ b/lib/rendering/lpe/osl/oslconfig.h
+@@ -47,7 +47,7 @@ OSL_NAMESPACE_ENTER
+ 
+ // And some other things we borrow from OIIO...
+ using OIIO::ustring;
+-using OIIO::ustringHash;
++using OIIO::ustringhash;
+ using OIIO::string_view;
+ 
+ OSL_NAMESPACE_EXIT
+diff --git a/lib/rendering/mcrt_common/CMakeLists.txt b/lib/rendering/mcrt_common/CMakeLists.txt
+index f9c97c4..e4b5358 100644
+--- a/lib/rendering/mcrt_common/CMakeLists.txt
++++ b/lib/rendering/mcrt_common/CMakeLists.txt
+@@ -78,7 +78,7 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        embree
++        embree4
+         ${PROJECT_NAME}::common_mcrt_macros
+         ${PROJECT_NAME}::common_time
+         ${PROJECT_NAME}::deepfile
+diff --git a/lib/rendering/mcrt_common/ThreadLocalState.cc b/lib/rendering/mcrt_common/ThreadLocalState.cc
+index 76c9fa5..a2ab603 100644
+--- a/lib/rendering/mcrt_common/ThreadLocalState.cc
++++ b/lib/rendering/mcrt_common/ThreadLocalState.cc
+@@ -10,7 +10,7 @@
+ #include <scene_rdl2/render/logging/logging.h>
+ #include <scene_rdl2/render/util/Memory.h>
+ #include <tbb/enumerable_thread_specific.h>
+-#include <tbb/task_scheduler_init.h>
++#include <thread>
+ 
+ // There are on average 3 entries added to the profiler stack for each single
+ // entry on the handler stack. This heuristic is used to compute the
+@@ -50,7 +50,7 @@ std::atomic<unsigned> gNextFrameUpdateTLSIndex;
+ struct FrameUpdateTLSProxy
+ {
+     FrameUpdateTLSProxy() :
+-        mTLSIndex(gNextFrameUpdateTLSIndex.fetch_add(1))
++        mTLSIndex(gNextFrameUpdateTLSIndex++)
+     {
+     }
+ 
+@@ -283,7 +283,7 @@ initTLS(const TLSInitParams &initParams)
+     gPrivate.mInitParams = initParams;
+ 
+     if (gPrivate.mInitParams.mDesiredNumTBBThreads == 0) {
+-        gPrivate.mInitParams.mDesiredNumTBBThreads = tbb::task_scheduler_init::default_num_threads();
++        gPrivate.mInitParams.mDesiredNumTBBThreads = std::thread::hardware_concurrency();
+     }
+ 
+     MNRY_ASSERT_REQUIRE(gPrivate.mInitParams.mDesiredNumTBBThreads);
+diff --git a/lib/rendering/mcrt_common/Util.cc b/lib/rendering/mcrt_common/Util.cc
+index a0a067a..fd11caa 100644
+--- a/lib/rendering/mcrt_common/Util.cc
++++ b/lib/rendering/mcrt_common/Util.cc
+@@ -4,9 +4,9 @@
+ //
+ #include "Util.h"
+ #include <execinfo.h>  // backtrace
+-#include <tbb/mutex.h>
+ #include <sys/syscall.h>
+ 
++#include <mutex>
+ #include <cstring>
+ 
+ namespace moonray {
+@@ -21,7 +21,7 @@ threadSleep()
+ void
+ threadYield()
+ {
+-    __TBB_Yield();
++    sched_yield();
+ }
+ 
+ void
+@@ -38,7 +38,7 @@ debugPrintThreadID(const char *contextString)
+ void
+ debugPrintCallstack(const char *contextString)
+ {
+-    static tbb::mutex mutex;
++    static std::mutex mutex;
+ 
+     mutex.lock();
+ 
+diff --git a/lib/rendering/pbr/CMakeLists.txt b/lib/rendering/pbr/CMakeLists.txt
+index adb0f7f..ba7bfec 100644
+--- a/lib/rendering/pbr/CMakeLists.txt
++++ b/lib/rendering/pbr/CMakeLists.txt
+@@ -13,6 +13,8 @@ set(component rendering_pbr)
+ set(installIncludeDir ${PACKAGE_NAME}/rendering/pbr)
+ set(exportGroup ${PROJECT_NAME}Targets)
+ 
++find_package(Imath REQUIRED)
++
+ add_library(${component} SHARED "")
+ add_library(${PROJECT_NAME}::${component} ALIAS ${component})
+ 
+@@ -96,7 +98,7 @@ function(make_ispc_target target sources stubsDestination)
+ 
+     target_link_libraries(${target}
+         PRIVATE
+-            embree
++            embree4
+             ${PROJECT_NAME}::bvh_shading_ispc
+             ${PROJECT_NAME}::common_mcrt_macros
+             ${PROJECT_NAME}::rendering_lpe
+@@ -136,7 +138,7 @@ function(make_ispc_target target sources stubsDestination)
+     get_target_property(objLibDeps ${target} DEPENDENCY)
+     if(NOT objLibDeps STREQUAL "")
+         add_dependencies(${objLibDeps} 
+-            embree
++            embree4
+             ${PROJECT_NAME}::bvh_shading_ispc
+             ${PROJECT_NAME}::common_mcrt_macros
+             ${PROJECT_NAME}::rendering_lpe
+@@ -395,11 +397,13 @@ target_include_directories(${component}
+         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include>
++    PRIVATE
++        ${IMATH_INCLUDE_DIRS}/Imath
+ )
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        embree
++        embree4
+         ${PROJECT_NAME}::common_mcrt_macros
+         ${PROJECT_NAME}::deepfile
+         ${PROJECT_NAME}::rendering_geom
+@@ -410,7 +414,7 @@ target_link_libraries(${component}
+         ${PROJECT_NAME}::shading_eval_ispc
+         ${PROJECT_NAME}::shading_ispc
+         ${PROJECT_NAME}::texturing_sampler
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         Random123::Random123
+         SceneRdl2::common_except
+         SceneRdl2::render_util
+diff --git a/lib/rendering/pbr/Types.h b/lib/rendering/pbr/Types.h
+index f0a2e10..c326b86 100644
+--- a/lib/rendering/pbr/Types.h
++++ b/lib/rendering/pbr/Types.h
+@@ -12,7 +12,7 @@
+ #include <scene_rdl2/common/math/Vec3.h>
+ #include <scene_rdl2/common/math/Vec4.h>
+ 
+-#include <tbb/atomic.h>
++#include <atomic>
+ #include <vector>
+ 
+ 
+diff --git a/lib/rendering/pbr/camera/BakeCamera.cc b/lib/rendering/pbr/camera/BakeCamera.cc
+index 1fa38e7..fc3c025 100644
+--- a/lib/rendering/pbr/camera/BakeCamera.cc
++++ b/lib/rendering/pbr/camera/BakeCamera.cc
+@@ -260,7 +260,7 @@ BakeCamera::updateImpl(const scene_rdl2::math::Mat4d &world2render)
+         if (!filename.empty() && needNormals()) {
+             // allocate new handle
+             texture::TextureSampler *textureSampler = texture::getTextureSampler();
+-            OIIO::TextureSystem *textureSystem = textureSampler->getTextureSystem();
++            OIIO::TextureSystem* textureSystem = textureSampler->getTextureSystem();
+             std::string errorString;
+             texture::TextureHandle *textureHandle = 
+                 textureSampler->getHandle(filename, errorString, textureSystem->get_perthread_info());
+diff --git a/lib/rendering/pbr/camera/BakeCamera.h b/lib/rendering/pbr/camera/BakeCamera.h
+index 879d738..6a3978a 100644
+--- a/lib/rendering/pbr/camera/BakeCamera.h
++++ b/lib/rendering/pbr/camera/BakeCamera.h
+@@ -45,7 +45,7 @@ private:
+ 
+         std::string mFilename;
+         texture::TextureHandle *mTextureHandle;
+-        OIIO::TextureSystem *mTextureSystem;
++        OIIO::TextureSystem* mTextureSystem;
+     };
+ 
+     // These need to match up with the enum declared in
+diff --git a/lib/rendering/pbr/core/Cryptomatte.cc b/lib/rendering/pbr/core/Cryptomatte.cc
+index 239c35f..38242df 100644
+--- a/lib/rendering/pbr/core/Cryptomatte.cc
++++ b/lib/rendering/pbr/core/Cryptomatte.cc
+@@ -99,7 +99,7 @@ void CryptomatteBuffer::addSampleVector(unsigned x, unsigned y, float sampleId,
+                                         bool incrementSamples)
+ {
+     // Lock in case multiple threads want to add samples to this pixel
+-    tbb::mutex::scoped_lock lock(mPixelMutexes[getMutexIdx(x, y)]);
++    std::scoped_lock lock(mPixelMutexes[getMutexIdx(x, y)]);
+ 
+     PixelEntry &pixelEntry = mPixelEntries[CRYPTOMATTE_TYPE_REGULAR][y * mWidth + x];
+ 
+diff --git a/lib/rendering/pbr/core/Cryptomatte.h b/lib/rendering/pbr/core/Cryptomatte.h
+index 6e702a5..59b2aa5 100644
+--- a/lib/rendering/pbr/core/Cryptomatte.h
++++ b/lib/rendering/pbr/core/Cryptomatte.h
+@@ -9,7 +9,7 @@
+ #include <scene_rdl2/scene/rdl2/RenderOutput.h>
+ 
+ #include <list>
+-#include <tbb/mutex.h>
++#include <mutex>
+ #include <vector>
+ 
+ namespace moonray {
+@@ -208,7 +208,7 @@ private:
+  */
+     static const int mMutexTileSize = 15;
+     // force mutex to be cache-line aligned for speed
+-    struct CACHE_ALIGN AlignedMutex : public tbb::mutex {};
++    struct CACHE_ALIGN AlignedMutex : public std::mutex {};
+     AlignedMutex *mPixelMutexes;
+     int getMutexIdx(unsigned x, unsigned y) const {
+         return (y % mMutexTileSize) * mMutexTileSize + (x % mMutexTileSize);
+diff --git a/lib/rendering/pbr/core/DeepBuffer.cc b/lib/rendering/pbr/core/DeepBuffer.cc
+index 07e05bc..ec3a5ec 100644
+--- a/lib/rendering/pbr/core/DeepBuffer.cc
++++ b/lib/rendering/pbr/core/DeepBuffer.cc
+@@ -351,7 +351,7 @@ DeepBuffer::addSample8x8Safe(unsigned x, unsigned y, unsigned subpixelX, unsigne
+                              float scale, float weight)
+ {
+     // Lock in case multiple threads want to add samples to this pixel
+-    tbb::mutex::scoped_lock lock(mPixelMutex[getMutexIdx(x, y)]);
++    std::scoped_lock lock(mPixelMutex[getMutexIdx(x, y)]);
+ 
+     addSample8x8(x, y, subpixelX, subpixelY, layer, ids, t, rayZ, normal, alpha,
+                  channels, numChannels, values, scale, weight);
+diff --git a/lib/rendering/pbr/core/DeepBuffer.h b/lib/rendering/pbr/core/DeepBuffer.h
+index 52cb8ff..4b006c8 100644
+--- a/lib/rendering/pbr/core/DeepBuffer.h
++++ b/lib/rendering/pbr/core/DeepBuffer.h
+@@ -3,6 +3,9 @@
+ 
+ #pragma once
+ 
++#include <OpenEXR/ImfHeader.h>
++#include <Imath/ImathVec.h>
++
+ #include <moonray/rendering/pbr/core/Aov.h>
+ 
+ #include <scene_rdl2/common/fb_util/PixelBuffer.h>
+@@ -12,8 +15,8 @@
+ #include <moonray/deepfile/DcxChannelContext.h>
+ #include <moonray/deepfile/DcxChannelSet.h>
+ #include <moonray/deepfile/DcxDeepImageTile.h>
+-#include <OpenEXR/ImfHeader.h>
+-#include <tbb/mutex.h>
++
++#include <mutex>
+ 
+ namespace moonray {
+ 
+@@ -420,7 +423,7 @@ private:
+  */
+     static const int mMutexTileSize = 15;
+     // force mutex to be cache-line aligned for speed
+-    struct CACHE_ALIGN AlignedMutex : public tbb::mutex {};
++    struct CACHE_ALIGN AlignedMutex : public std::mutex {};
+     AlignedMutex *mPixelMutex;
+     int getMutexIdx(unsigned x, unsigned y) const {
+         return (y % mMutexTileSize) * mMutexTileSize + (x % mMutexTileSize);
+diff --git a/lib/rendering/pbr/core/Distribution.cc b/lib/rendering/pbr/core/Distribution.cc
+index f879d85..f4d7b2f 100644
+--- a/lib/rendering/pbr/core/Distribution.cc
++++ b/lib/rendering/pbr/core/Distribution.cc
+@@ -887,7 +887,13 @@ ImageDistribution::init(const std::string &mapFilename,
+         heightLevelAbove = inputLevelHeight;
+ 
+         // Read image in floating point format
+-        bool readOk = in->read_image(OIIO::TypeDesc::FLOAT, inputPixelBuffer);
++        bool readOk = in->read_image(
++            in->current_subimage(),
++            mipLevel,
++            0, -1,
++            OIIO::TypeDesc::FLOAT, 
++            inputPixelBuffer
++        );
+ 
+         // Error if it wasn't read properly
+         if (!readOk) {
+diff --git a/lib/rendering/pbr/core/PbrTLState.cc b/lib/rendering/pbr/core/PbrTLState.cc
+index 54bcb19..bfda8fa 100644
+--- a/lib/rendering/pbr/core/PbrTLState.cc
++++ b/lib/rendering/pbr/core/PbrTLState.cc
+@@ -11,7 +11,8 @@
+ #include <moonray/rendering/pbr/handlers/RayHandlers.h>
+ #include <moonray/rendering/shading/Types.h>
+ #include <moonray/common/mcrt_macros/moonray_static_check.h>
+-#include <tbb/mutex.h>
++
++#include <mutex>
+ 
+ // These aren't free so only turn it on if you are doing memory profiling.
+ // This will print out the peak number of pool items used for a particular run.
+@@ -103,7 +104,7 @@ struct Private
+ };
+ 
+ Private gPrivate;
+-tbb::mutex gInitMutex;
++std::mutex gInitMutex;
+ 
+ void
+ initPool(const unsigned poolSize, const unsigned numTBBThreads,
+@@ -342,7 +343,7 @@ TLState::~TLState()
+ 
+     {
+         // Protect against races the during gPrivate clean up.
+-        tbb::mutex::scoped_lock lock(gInitMutex);
++        std::scoped_lock lock(gInitMutex);
+ 
+         MOONRAY_THREADSAFE_STATIC_WRITE(--gPrivate.mRefCount);
+         if (gPrivate.mRefCount == 0) {
+@@ -796,7 +797,7 @@ TLState::allocTls(mcrt_common::ThreadLocalState *tls,
+ {
+     {
+         // Protect against races the very first time we initialize gPrivate.
+-        tbb::mutex::scoped_lock lock(gInitMutex);
++        std::scoped_lock lock(gInitMutex);
+ 
+         if (gPrivate.mRefCount == 0) {
+             initPrivate(initParams);
+diff --git a/lib/rendering/rndr/CMakeLists.txt b/lib/rendering/rndr/CMakeLists.txt
+index 91e2da5..ac054d3 100644
+--- a/lib/rendering/rndr/CMakeLists.txt
++++ b/lib/rendering/rndr/CMakeLists.txt
+@@ -6,6 +6,8 @@ set(component rendering_rndr)
+ set(installIncludeDir ${PACKAGE_NAME}/rendering/rndr)
+ set(exportGroup ${PROJECT_NAME}Targets)
+ 
++find_package(Imath REQUIRED)
++
+ add_library(${component} SHARED "")
+ add_library(${PROJECT_NAME}::${component} ALIAS ${component})
+ 
+@@ -91,6 +93,8 @@ target_include_directories(${component}
+     PUBLIC
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include>
++    PRIVATE
++        ${IMATH_INCLUDE_DIRS}/Imath
+ )
+ 
+ if(IsDarwinPlatform)
+@@ -120,10 +124,10 @@ target_link_libraries(${component}
+         ${PROJECT_NAME}::rendering_rt
+         ${PROJECT_NAME}::statistics
+         ${PROJECT_NAME}::texturing_sampler
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         OpenVDB::OpenVDB
+         TBB::tbb
+-        embree
++        embree4
+         ${PlatformSpecificLibs}
+ )
+ 
+diff --git a/lib/rendering/rndr/OiioReader.cc b/lib/rendering/rndr/OiioReader.cc
+index 9a433cc..b3ae47e 100644
+--- a/lib/rendering/rndr/OiioReader.cc
++++ b/lib/rendering/rndr/OiioReader.cc
+@@ -23,7 +23,13 @@ OiioReader::readData(const int subImageId)
+         return false;           // internal pixels buffer resize failed
+     }
+ 
+-    mIn->read_image(OIIO::TypeDesc::FLOAT, mPixels.data());
++    mIn->read_image(
++        subImageId,
++        mIn->current_miplevel(),
++        0, -1,
++        OIIO::TypeDesc::FLOAT, 
++        mPixels.data()
++    );
+     return true;
+ }
+ 
+diff --git a/lib/rendering/rndr/PixelBufferUtils.cc b/lib/rendering/rndr/PixelBufferUtils.cc
+index eceb928..48307cd 100644
+--- a/lib/rendering/rndr/PixelBufferUtils.cc
++++ b/lib/rendering/rndr/PixelBufferUtils.cc
+@@ -136,7 +136,14 @@ readPixelBuffer(Buffer& buf, const std::string& filename,
+ 
+     MNRY_ASSERT_REQUIRE(tmpBufferSrc);
+ 
+-    if (!in->read_image(imageSpec.format, tmpBufferSrc)) {
++    if (!in->read_image(
++        in->current_subimage(),
++        in->current_miplevel(),
++        0, -1,
++        imageSpec.format, 
++        tmpBufferSrc
++    )) 
++    {
+         free(tmpBufferSrc);
+         throw scene_rdl2::except::IoError("Cannot read image file: \"" + filename +
+                   "\" (" + in->geterror() + ")");
+diff --git a/lib/rendering/rndr/RenderContext.cc b/lib/rendering/rndr/RenderContext.cc
+index 69f5275..7c7e97f 100644
+--- a/lib/rendering/rndr/RenderContext.cc
++++ b/lib/rendering/rndr/RenderContext.cc
+@@ -1496,7 +1496,7 @@ RenderContext::runDisplayFiltersBatch() const
+     }
+     snapshotAovsForDisplayFilters(true, true);
+     simpleLoop (/*parallel*/ true, 0u, (unsigned)mDriver->getTiles()->size(), [&](unsigned tileIdx) {
+-        int threadId = tbb::task_arena::current_thread_index();
++        int threadId = tbb::this_task_arena::current_thread_index();
+         displayFilterDriver.runDisplayFilters(tileIdx, threadId);
+     });
+ }
+diff --git a/lib/rendering/rndr/RenderDriver.cc b/lib/rendering/rndr/RenderDriver.cc
+index b06e9f6..50dae79 100644
+--- a/lib/rendering/rndr/RenderDriver.cc
++++ b/lib/rendering/rndr/RenderDriver.cc
+@@ -30,6 +30,8 @@
+ #include <scene_rdl2/render/util/ProcCpuAffinity.h>
+ #endif
+ 
++#include <tbb/global_control.h>
++
+ #include <random>
+ 
+ // Quick way to force a single sample per pixel. For debugging.
+@@ -559,7 +561,7 @@ RenderDriver::RenderDriver(const TLSInitParams &initParams) :
+     setProcCpuAffinity(tlsInitParams);
+ 
+     if (tlsInitParams.mDesiredNumTBBThreads == 0) {
+-        tlsInitParams.mDesiredNumTBBThreads = tbb::task_scheduler_init::default_num_threads();
++        tlsInitParams.mDesiredNumTBBThreads = std::thread::hardware_concurrency();
+     }
+ 
+ #ifdef FORCE_SINGLE_THREADED_RENDERING
+@@ -577,7 +579,7 @@ RenderDriver::RenderDriver(const TLSInitParams &initParams) :
+     // The second is used by the threads for the MCRT stage. However, MCRT threads
+     // itself is not using the TBB thread pool anymore and use MoonRay own thread
+     // pool due to we need CPU affinity control for them.
+-    mTaskScheduler = new tbb::task_scheduler_init(int(tlsInitParams.mDesiredNumTBBThreads));
++    mTaskScheduler = new tbb::global_control(tbb::global_control::max_allowed_parallelism, int(tlsInitParams.mDesiredNumTBBThreads));
+ 
+     mFilm = alignedMallocCtor<Film>(CACHE_LINE_SIZE);
+ 
+@@ -737,7 +739,7 @@ RenderDriver::~RenderDriver()
+     // when building this library, and also to make sure that no other
+     // tbb::task_scheduler_init or other higher-level task scheduler objects
+     // (i.e. tbb::task_group, etc.) are active in the process.
+-    MNRY_VERIFY(mTaskScheduler)->terminate();
++    //MNRY_VERIFY(mTaskScheduler)->terminate();
+     delete mTaskScheduler;
+ 
+     cleanUpTLS();
+@@ -2392,7 +2394,7 @@ RenderDriver::renderThread(RenderDriver *driver,
+     // thread itself is not using the TBB thread anymore due to we need CPU-affinity
+     // control. We still keep tbb::task_scheduler for other TBB thread requirements
+     // we might create during the MCRT stage.
+-    tbb::task_scheduler_init scheduler(int(initParams.mDesiredNumTBBThreads));
++    tbb::global_control scheduler(tbb::global_control::max_allowed_parallelism, int(initParams.mDesiredNumTBBThreads));
+ 
+     // TLS initialization.
+     initTLS(initParams);
+@@ -2432,7 +2434,6 @@ RenderDriver::renderThread(RenderDriver *driver,
+         case KILL_RENDER_THREAD:
+             // This is a sub-tbb scheduler init, we still have the main one to
+             // clean up later, which happens in the RenderDriver destructor.
+-            scheduler.terminate();
+             driver->mRenderThreadState.set(KILL_RENDER_THREAD, DEAD);
+             quit = true;
+             break;
+diff --git a/lib/rendering/rndr/RenderDriver.h b/lib/rendering/rndr/RenderDriver.h
+index 2e513b4..93823b1 100644
+--- a/lib/rendering/rndr/RenderDriver.h
++++ b/lib/rendering/rndr/RenderDriver.h
+@@ -28,13 +28,13 @@
+ #include <scene_rdl2/common/grid_util/Parser.h>
+ #include <scene_rdl2/render/util/AtomicFloat.h>
+ 
+-#include <tbb/task_scheduler_init.h>
+ 
+ //#define SINGLE_THREAD_CRAWLALLPIXELS
+ 
+ #ifndef SINGLE_THREAD_CRAWLALLPIXELS
+ #include <tbb/parallel_for.h>
+ #endif // end !SINGLE_THREAD_CRAWLALLPIXELS
++#include <tbb/global_control.h>
+ 
+ #include <atomic>
+ #include <array>
+@@ -723,7 +723,7 @@ private:
+     std::unique_ptr<TileScheduler>  mTileSchedulerCheckpointInitEstimation;
+     TileWorkQueue       mTileWorkQueue;
+ 
+-    tbb::task_scheduler_init *mTaskScheduler;
++    tbb::global_control *mTaskScheduler;
+ 
+     // The is the sample count.
+     size_t              mSamplesPerPass[MAX_RENDER_PASSES];
+diff --git a/lib/rendering/rndr/RenderFrame.cc b/lib/rendering/rndr/RenderFrame.cc
+index 4e93f97..e5d0669 100644
+--- a/lib/rendering/rndr/RenderFrame.cc
++++ b/lib/rendering/rndr/RenderFrame.cc
+@@ -411,7 +411,7 @@ RenderDriver::runDisplayFiltersEndOfPass(RenderDriver *driver, const FrameState
+     fs.mRenderContext->snapshotAovsForDisplayFilters(true, true);
+     const DisplayFilterDriver& displayFilterDriver = driver->getDisplayFilterDriver();
+     simpleLoop (true, 0u, (unsigned int)driver->getTiles()->size() - 1u, [&](unsigned tileIdx) {
+-        int threadId = tbb::task_arena::current_thread_index();
++        int threadId = tbb::this_task_arena::current_thread_index();
+         displayFilterDriver.runDisplayFilters(tileIdx, threadId);
+     });
+ }
+diff --git a/lib/rendering/rndr/RenderOptions.cc b/lib/rendering/rndr/RenderOptions.cc
+index 4485a4a..bc6171b 100644
+--- a/lib/rendering/rndr/RenderOptions.cc
++++ b/lib/rendering/rndr/RenderOptions.cc
+@@ -13,7 +13,6 @@
+ #include <scene_rdl2/render/util/StrUtil.h>
+ #include <scene_rdl2/scene/rdl2/rdl2.h>
+ 
+-#include <tbb/task_scheduler_init.h>
+ 
+ #include <algorithm>
+ #include <cctype>
+@@ -22,6 +21,7 @@
+ #include <iterator>
+ #include <sstream>
+ #include <string>
++#include <thread>
+ #include <utility>
+ #include <vector>
+ #include <stdint.h>
+@@ -667,7 +667,7 @@ RenderOptions::getThreads() const
+     }
+ 
+     // Last-ditch default.
+-    return tbb::task_scheduler_init::default_num_threads();
++    return std::thread::hardware_concurrency();
+ }
+ 
+ void
+diff --git a/lib/rendering/rndr/RenderStatistics.cc b/lib/rendering/rndr/RenderStatistics.cc
+index 98e15c9..cfdf72e 100644
+--- a/lib/rendering/rndr/RenderStatistics.cc
++++ b/lib/rendering/rndr/RenderStatistics.cc
+@@ -1056,24 +1056,24 @@ RenderStats::logGeometryUsage(const geom::GeometryStatistics& totalGeomStatistic
+ 
+     for(std::size_t i = 0; i < geomStateInfo.size(); ++i) {
+         geomTable.emplace_back(geomStateInfo[i].first,
+-           geomStateInfo[i].second.mFaceCount,
+-           geomStateInfo[i].second.mMeshVertexCount,
+-           geomStateInfo[i].second.mCurvesCount,
+-           geomStateInfo[i].second.mCVCount,
+-           geomStateInfo[i].second.mInstanceCount);
++           geomStateInfo[i].second.mFaceCount.load(),
++           geomStateInfo[i].second.mMeshVertexCount.load(),
++           geomStateInfo[i].second.mCurvesCount.load(),
++           geomStateInfo[i].second.mCVCount.load(),
++           geomStateInfo[i].second.mInstanceCount.load());
+     }
+ 
+     StatsTable<2> summaryTable("Geometry Statistics Summary");
+     summaryTable.emplace_back("Total Face Count",
+-        totalGeomStatistics.mFaceCount);
++        totalGeomStatistics.mFaceCount.load());
+     summaryTable.emplace_back("Total Mesh Vertex Count",
+-        totalGeomStatistics.mMeshVertexCount);
++        totalGeomStatistics.mMeshVertexCount.load());
+     summaryTable.emplace_back("Total Curves Count",
+-        totalGeomStatistics.mCurvesCount);
++        totalGeomStatistics.mCurvesCount.load());
+     summaryTable.emplace_back("Total Curves CV Count",
+-        totalGeomStatistics.mCVCount);
++        totalGeomStatistics.mCVCount.load());
+     summaryTable.emplace_back("Total Instance Count",
+-        totalGeomStatistics.mInstanceCount);
++        totalGeomStatistics.mInstanceCount.load());
+ 
+     auto writeCSV = [&](std::ostream& outs, bool athenaFormat) {
+         outs.precision(2);
+diff --git a/lib/rendering/rt/CMakeLists.txt b/lib/rendering/rt/CMakeLists.txt
+index 10288ff..64e439b 100644
+--- a/lib/rendering/rt/CMakeLists.txt
++++ b/lib/rendering/rt/CMakeLists.txt
+@@ -133,7 +133,7 @@ target_link_libraries(${component}
+         SceneRdl2::common_math
+         SceneRdl2::render_util
+         SceneRdl2::scene_rdl2
+-        embree
++        embree4
+         TBB::tbb
+ )
+ 
+diff --git a/lib/rendering/rt/gpu/metal/MetalGPUAccelerator.h b/lib/rendering/rt/gpu/metal/MetalGPUAccelerator.h
+index ad4a4f3..74d3fdb 100644
+--- a/lib/rendering/rt/gpu/metal/MetalGPUAccelerator.h
++++ b/lib/rendering/rt/gpu/metal/MetalGPUAccelerator.h
+@@ -23,7 +23,7 @@ namespace rt {
+ 
+ // Also in EmbreeAccelerator.cc
+ typedef tbb::concurrent_unordered_map<std::shared_ptr<geom::SharedPrimitive>,
+-        tbb::atomic<MetalGPUPrimitiveGroup*>, geom::SharedPtrHash> SharedGroupMap;
++        std::atomic<MetalGPUPrimitiveGroup*>, geom::SharedPtrHash> SharedGroupMap;
+ 
+ 
+ class MetalGPUAccelerator
+diff --git a/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h b/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
+index 2b90a83..3122d2b 100644
+--- a/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
++++ b/lib/rendering/rt/gpu/optix/OptixGPUPrimitive.h
+@@ -8,6 +8,7 @@
+ #include "OptixGPUShadowLinking.h"
+ 
+ #include <cuda.h>
++#include <array>
+ #include <vector>
+ 
+ namespace moonray {
+diff --git a/lib/rendering/rt/gpu/optix/OptixGPUUtils.cc b/lib/rendering/rt/gpu/optix/OptixGPUUtils.cc
+index 01d5ef8..dcbc67a 100644
+--- a/lib/rendering/rt/gpu/optix/OptixGPUUtils.cc
++++ b/lib/rendering/rt/gpu/optix/OptixGPUUtils.cc
+@@ -63,7 +63,18 @@ createOptixContext(OptixLogCallback logCallback,
+     cudaFree(0);    // init CUDA
+ 
+     int numDevices = 0;
+-    cudaGetDeviceCount(&numDevices);
++    cudaError_t cudaError = cudaSuccess;
++    cudaError = cudaGetDeviceCount(&numDevices);
++    if (cudaError != cudaSuccess) {
++        if (cudaError == cudaErrorNoDevice) {
++            *errorMsg = "No CUDA-capable devices were detected";
++        }
++        else {
++            *errorMsg = "The installed NVIDIA CUDA driver is older than the CUDA runtime library";
++        }
++        return false;
++    }
++
+     if (numDevices == 0) {
+         *errorMsg = "No CUDA capable devices found";
+         return false;
+diff --git a/lib/rendering/shading/BasicTexture.cc b/lib/rendering/shading/BasicTexture.cc
+index 9db06a8..6a1e0bc 100644
+--- a/lib/rendering/shading/BasicTexture.cc
++++ b/lib/rendering/shading/BasicTexture.cc
+@@ -189,7 +189,7 @@ public:
+ 
+         MNRY_ASSERT(mTextureHandles[0]);
+ 
+-        OIIO::TextureSystem *textureSystem = textureSampler->getTextureSystem();
++        OIIO::TextureSystem* textureSystem = textureSampler->getTextureSystem();
+ 
+         // retrieve resolution and pixel aspect ratio information. This
+         // info may be needed in certain contexts, see ProjectCameraMap_v2 shader
+diff --git a/lib/rendering/shading/Material.cc b/lib/rendering/shading/Material.cc
+index 5a963f3..494c036 100644
+--- a/lib/rendering/shading/Material.cc
++++ b/lib/rendering/shading/Material.cc
+@@ -8,11 +8,11 @@
+ namespace moonray {
+ namespace shading {
+ 
+-tbb::mutex Material::sMaterialListMutex;
++std::mutex Material::sMaterialListMutex;
+ MaterialPtrList Material::sAllMaterials;
+ MaterialPtrList Material::sQueuelessMaterials;
+ 
+-tbb::mutex Material::sShadeQueueMutex;
++std::mutex Material::sShadeQueueMutex;
+ ShadeQueueList Material::sShadeQueues;
+ 
+ std::atomic<size_t> Material::sFlushCycleIdx;
+@@ -27,7 +27,7 @@ Material::Material(const scene_rdl2::rdl2::SceneObject & owner) :
+     mMaterialLabelId(-1),   // no material label
+     mLpeMaterialLabelId(-1) // no lpe material label
+ {
+-    tbb::mutex::scoped_lock lock(sMaterialListMutex);
++    std::scoped_lock lock(sMaterialListMutex);
+     sAllMaterials.push_back(this);
+     sQueuelessMaterials.push_back(this);
+     mMaterialId = 0;
+@@ -39,7 +39,7 @@ Material::~Material()
+     if (mShadeQueue) {
+ 
+         {
+-            tbb::mutex::scoped_lock lock(sShadeQueueMutex);
++            std::scoped_lock lock(sShadeQueueMutex);
+ 
+             // Check the shade queue size also since it may have already been destroyed
+             // during global program destruction time.
+@@ -59,7 +59,7 @@ Material::~Material()
+     }
+ 
+     {
+-        tbb::mutex::scoped_lock lock(sMaterialListMutex);
++        std::scoped_lock lock(sMaterialListMutex);
+ 
+         // Remove ourselves from global list of Materials.
+         for (auto it = sAllMaterials.begin(); it != sAllMaterials.end(); ++it) {
+@@ -99,7 +99,7 @@ Material::deferEntriesForLaterProcessing(mcrt_common::ThreadLocalState *tls,
+     }
+ 
+     {
+-        tbb::mutex::scoped_lock lock(mDeferredEntryMutex);
++        std::scoped_lock lock(mDeferredEntryMutex);
+         mDeferredEntries.insert(mDeferredEntries.end(), entries, entries + numEntries);
+     }
+ }
+@@ -151,8 +151,8 @@ Material::retrieveDeferredEntries(mcrt_common::ThreadLocalState *tls,
+ void
+ Material::allocShadeQueues(unsigned shadeQueueSize, ShadeQueue::Handler handler)
+ {
+-    tbb::mutex::scoped_lock lockMaterialMutex(sMaterialListMutex);
+-    tbb::mutex::scoped_lock lockShadeQueueMutex(sShadeQueueMutex);
++    std::scoped_lock lockMaterialMutex(sMaterialListMutex);
++    std::scoped_lock lockShadeQueueMutex(sShadeQueueMutex);
+ 
+     for (auto it = sQueuelessMaterials.begin(); it != sQueuelessMaterials.end(); ++it) {
+         (*it)->allocShadeQueue(shadeQueueSize, handler);
+@@ -283,7 +283,7 @@ Material::resetDeferredEntryState()
+ {
+     for (auto it = sAllMaterials.begin(); it != sAllMaterials.end(); ++it) {
+         Material *material = *it;
+-        tbb::mutex::scoped_lock lock(material->mDeferredEntryMutex);
++        std::scoped_lock lock(material->mDeferredEntryMutex);
+         material->mDeferredEntries.clear();
+     }
+ 
+diff --git a/lib/rendering/shading/Material.h b/lib/rendering/shading/Material.h
+index 3aac352..20aefde 100644
+--- a/lib/rendering/shading/Material.h
++++ b/lib/rendering/shading/Material.h
+@@ -167,14 +167,14 @@ protected:
+     // We will also get warned when executing this codepath at render time via
+     // the logger so if it becomes a common case, we need to revisit and remove
+     // these locks and heap allocations.
+-    tbb::mutex              mDeferredEntryMutex;
++    std::mutex              mDeferredEntryMutex;
+     std::vector<SortedRayState> mDeferredEntries;
+ 
+-    static tbb::mutex       sMaterialListMutex;
++    static std::mutex       sMaterialListMutex;
+     static MaterialPtrList  sAllMaterials;
+     static MaterialPtrList  sQueuelessMaterials;
+ 
+-    static tbb::mutex       sShadeQueueMutex;
++    static std::mutex       sShadeQueueMutex;
+     static ShadeQueueList   sShadeQueues;
+ 
+     // This is used by the flushNonEmptyShadeQueue function to iterate through all queues
+diff --git a/lib/rendering/shading/UdimTexture.cc b/lib/rendering/shading/UdimTexture.cc
+index 465b5da..9fef492 100644
+--- a/lib/rendering/shading/UdimTexture.cc
++++ b/lib/rendering/shading/UdimTexture.cc
+@@ -24,10 +24,10 @@
+ 
+ #include <tbb/blocked_range.h>
+ #include <tbb/parallel_for.h>
+-#include <tbb/mutex.h>
+ 
+ #include <dirent.h>
+ #include <glob.h>
++#include <mutex>
+ #include <vector>
+ #include <algorithm>
+ 
+@@ -153,8 +153,8 @@ public:
+         // to allow for the possibility that we may someday create image maps
+         // on multiple threads, we'll protect the writes of the class statics
+         // with a mutex.
+-        static tbb::mutex errorMutex;
+-        tbb::mutex::scoped_lock lock(errorMutex);
++        static std::mutex errorMutex;
++        std::scoped_lock lock(errorMutex);
+         MOONRAY_START_THREADSAFE_STATIC_WRITE
+ 
+         mIspc.mUdimTextureStaticDataPtr = &sUdimTextureStaticData;
+@@ -276,7 +276,7 @@ public:
+         mIspc.mApplyGamma = applyGamma;
+         mIspc.mIs8bit = mIs8bit;
+ 
+-        tbb::mutex errorMutex;
++        std::mutex errorMutex;
+ 
+         tbb::blocked_range<int> range(0, mTextureHandleIndices.size());
+         tbb::parallel_for(range, [&] (const tbb::blocked_range<int> &r) {
+@@ -513,7 +513,7 @@ private:
+         // info may be needed in certain contexts, see ProjectCameraMap_v2 shader
+         OIIO::ImageSpec spec;
+         OIIO::ustring ufilename(udimFileName.c_str());
+-        OIIO::TextureSystem *textureSystem = textureSampler->getTextureSystem();
++        OIIO::TextureSystem* textureSystem = textureSampler->getTextureSystem();
+         textureSystem->get_imagespec(ufilename, 0, spec);
+         mIs8bit = (spec.format == OIIO::TypeDesc::UINT8);
+         mWidths[idx] = spec.width;
+diff --git a/lib/rendering/shading/bsdf/hair/BsdfHairOneSampler.cc b/lib/rendering/shading/bsdf/hair/BsdfHairOneSampler.cc
+index 10530df..bedc7f2 100644
+--- a/lib/rendering/shading/bsdf/hair/BsdfHairOneSampler.cc
++++ b/lib/rendering/shading/bsdf/hair/BsdfHairOneSampler.cc
+@@ -6,6 +6,7 @@
+ /// $Id$
+ ///
+ 
++#include <array>
+ 
+ #include "BsdfHairOneSampler.h"
+ #include <moonray/rendering/shading/bsdf/BsdfSlice.h>
+diff --git a/lib/rendering/shading/ispc/CMakeLists.txt b/lib/rendering/shading/ispc/CMakeLists.txt
+index 907ef03..9c4bad3 100644
+--- a/lib/rendering/shading/ispc/CMakeLists.txt
++++ b/lib/rendering/shading/ispc/CMakeLists.txt
+@@ -397,7 +397,7 @@ target_link_libraries(shading_ispc
+         shading_eval_ispc
+         ${PROJECT_NAME}::texturing_sampler
+     PUBLIC
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         SceneRdl2::common_platform
+         SceneRdl2::scene_rdl2
+ )
+diff --git a/lib/rendering/texturing/sampler/CMakeLists.txt b/lib/rendering/texturing/sampler/CMakeLists.txt
+index 1c8124e..8f6ff87 100644
+--- a/lib/rendering/texturing/sampler/CMakeLists.txt
++++ b/lib/rendering/texturing/sampler/CMakeLists.txt
+@@ -83,7 +83,7 @@ target_link_libraries(${component}
+         ${PROJECT_NAME}::rendering_mcrt_common
+         ${PROJECT_NAME}::statistics
+         JPEG::JPEG
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
+         OpenVDB::OpenVDB
+ )
+ 
+diff --git a/lib/rendering/texturing/sampler/TextureSampler.cc b/lib/rendering/texturing/sampler/TextureSampler.cc
+index fcbc173..74e64c7 100644
+--- a/lib/rendering/texturing/sampler/TextureSampler.cc
++++ b/lib/rendering/texturing/sampler/TextureSampler.cc
+@@ -468,7 +468,7 @@ TextureSampler::registerMapForInvalidation(const std::string &fileName, scene_rd
+ {
+ 
+     // Textures could be loaded in parallel, use mutex to avoid data race.
+-    tbb::recursive_mutex::scoped_lock lock(mMutex);
++    std::scoped_lock lock(mMutex);
+     
+     OIIO::ustring oiioFileName(fileName);
+ 
+@@ -494,7 +494,7 @@ TextureSampler::registerMapForInvalidation(const std::string &fileName, scene_rd
+ void
+ TextureSampler::unregisterMapForInvalidation(scene_rdl2::rdl2::Shader *map)
+ {
+-    tbb::recursive_mutex::scoped_lock lock(mMutex);
++    std::scoped_lock lock(mMutex);
+     MNRY_ASSERT(isValid());
+ 
+     auto mapRange = mShaderToName.equal_range(map);
+diff --git a/lib/rendering/texturing/sampler/TextureSampler.h b/lib/rendering/texturing/sampler/TextureSampler.h
+index af336dc..205bc19 100644
+--- a/lib/rendering/texturing/sampler/TextureSampler.h
++++ b/lib/rendering/texturing/sampler/TextureSampler.h
+@@ -11,8 +11,6 @@
+ #include <scene_rdl2/common/grid_util/Parser.h>
+ #include <scene_rdl2/common/math/Color.h>
+ 
+-#include <tbb/recursive_mutex.h>
+-
+ // system
+ #include <string>
+ #include <set>
+@@ -137,7 +135,7 @@ protected:
+     // For the udim case, a single ImageMap may reference multiple texture files.
+     std::multimap<scene_rdl2::rdl2::Shader *, OIIO::ustring> mShaderToName;
+ 
+-    tbb::recursive_mutex mMutex;
++    std::recursive_mutex mMutex;
+ 
+     Parser mParser;
+ };
+diff --git a/lib/rendering/texturing/sampler/TextureTLState.cc b/lib/rendering/texturing/sampler/TextureTLState.cc
+index 3fb09f9..9994baa 100644
+--- a/lib/rendering/texturing/sampler/TextureTLState.cc
++++ b/lib/rendering/texturing/sampler/TextureTLState.cc
+@@ -4,7 +4,6 @@
+ #include "TextureSampler.h"
+ #include "TextureTLState.h"
+ #include <moonray/common/mcrt_macros/moonray_static_check.h>
+-#include <tbb/mutex.h>
+ 
+ namespace ispc {
+ extern "C" uint32_t TextureTLState_hudValidation(bool);
+diff --git a/lib/rendering/texturing/sampler/TextureTLState.h b/lib/rendering/texturing/sampler/TextureTLState.h
+index dd6a98e..5d81e18 100644
+--- a/lib/rendering/texturing/sampler/TextureTLState.h
++++ b/lib/rendering/texturing/sampler/TextureTLState.h
+@@ -21,6 +21,8 @@
+ #pragma push_macro("NORMAL")
+ #undef COLOR
+ #undef NORMAL
++#include <Imath/ImathVec.h>
++
+ #include <OpenImageIO/version.h>
+ #include <OpenImageIO/texture.h>
+ #pragma pop_macro("COLOR")
+diff --git a/tests/lib/rendering/geom/prim/main.cc b/tests/lib/rendering/geom/prim/main.cc
+index baafbb4..05ac39e 100644
+--- a/tests/lib/rendering/geom/prim/main.cc
++++ b/tests/lib/rendering/geom/prim/main.cc
+@@ -5,7 +5,8 @@
+ #include "TestInterpolator.h"
+ #include <moonray/rendering/mcrt_common/ThreadLocalState.h>
+ #include <scene_rdl2/pdevunit/pdevunit.h>
+-#include <tbb/task_scheduler_init.h>
++#include <tbb/global_control.h>
++
+ int
+ main(int argc, char *argv[])
+ {
+@@ -15,7 +16,7 @@ main(int argc, char *argv[])
+ 
+     moonray::mcrt_common::TLSInitParams initParams;
+     initParams.mUnitTests = true;
+-    initParams.mDesiredNumTBBThreads = tbb::task_scheduler_init::default_num_threads();
++    initParams.mDesiredNumTBBThreads = tbb::global_control::max_allowed_parallelism;
+     initParams.mArenaBlockPool = arenaBlockPool.get();
+     moonray::mcrt_common::initTLS(initParams);
+ 
+diff --git a/tests/lib/rendering/lpe/CMakeLists.txt b/tests/lib/rendering/lpe/CMakeLists.txt
+index 3dc3906..378856d 100644
+--- a/tests/lib/rendering/lpe/CMakeLists.txt
++++ b/tests/lib/rendering/lpe/CMakeLists.txt
+@@ -11,12 +11,19 @@ target_sources(${target}
+         TestStateMachine.cc
+ )
+ 
++find_package(Imath REQUIRED)
++find_package(OpenImageIO REQUIRED)
++message("IMATH_MATH_LIBRARY=${IMATH_MATH_LIBRARY}")
++message("OIIO_LIBRARIES=${OIIO_LIBRARIES}")
++message("OIIO_OPENIMAGEIO_LIBRARY=${OIIO_OPENIMAGEIO_LIBRARY}")
++message("OIIO_OPENIMAGEIO_UTIL_LIBRARY=${OIIO_OPENIMAGEIO_UTIL_LIBRARY}")
+ target_link_libraries(${target}
+     PRIVATE
+-        ${IMATHIMATH}
++        ${IMATH_MATH_LIBRARY}
+         JPEG::JPEG
+         Moonray::rendering_lpe
+         SceneRdl2::pdevunit
++        ${OIIO_LIBRARIES}
+ )
+ 
+ # Set standard compile/link options
+diff --git a/tests/lib/rendering/pbr/CMakeLists.txt b/tests/lib/rendering/pbr/CMakeLists.txt
+index 88110d9..cc574d5 100644
+--- a/tests/lib/rendering/pbr/CMakeLists.txt
++++ b/tests/lib/rendering/pbr/CMakeLists.txt
+@@ -93,8 +93,6 @@ target_link_libraries(${target}
+         Moonray::rendering_bvh_shading
+         Moonray::rendering_geom
+         Moonray::rendering_mcrt_common
+-        Moonray::rendering_pbr
+-        Moonray::rendering_rndr
+         Moonray::rendering_shading
+         SceneRdl2::common_except
+         SceneRdl2::common_fb_util
+@@ -104,6 +102,7 @@ target_link_libraries(${target}
+         SceneRdl2::scene_rdl2
+         TBB::tbb
+         ${PlatformSpecificLibs}
++        "$<LINK_GROUP:RESCAN,Moonray::rendering_pbr,Moonray::rendering_rndr>"
+ )
+ 
+ add_dependencies(${target} ${objLib})
+diff --git a/tests/lib/rendering/pbr/TestBsdfCommon.cc b/tests/lib/rendering/pbr/TestBsdfCommon.cc
+index 55e81a5..f5abbc7 100755
+--- a/tests/lib/rendering/pbr/TestBsdfCommon.cc
++++ b/tests/lib/rendering/pbr/TestBsdfCommon.cc
+@@ -18,6 +18,7 @@
+ #include <moonray/rendering/shading/bsdf/BsdfSlice.h>
+ 
+ #include <tbb/tbb.h>
++#include <tbb/global_control.h>
+ 
+ #include <thread>
+ #include <vector>
+@@ -320,7 +321,7 @@ static void runTest(const TestBsdfSettings& test, int sampleCount, ProducerArgs&
+ #if defined(RUN_SINGLE_THREADED)
+     const unsigned sTaskCount = 1u;
+ #else
+-    const unsigned sTaskCount = tbb::task_scheduler_init::default_num_threads() - 1u; // Leave one for producer
++    const unsigned sTaskCount = tbb::global_control::max_allowed_parallelism - 1u; // Leave one for producer
+ #endif
+ 
+     TaskQueueType<Task> taskQueue;
+diff --git a/tests/lib/rendering/pbr/TestLightSetSampler.cc b/tests/lib/rendering/pbr/TestLightSetSampler.cc
+index f00e9c8..0915ee4 100644
+--- a/tests/lib/rendering/pbr/TestLightSetSampler.cc
++++ b/tests/lib/rendering/pbr/TestLightSetSampler.cc
+@@ -23,8 +23,6 @@
+ #include <scene_rdl2/common/math/Math.h>
+ #include <scene_rdl2/render/util/Arena.h>
+ 
+-#include <tbb/task_scheduler_init.h>
+-
+ 
+ // to iterate over the [0, 1)^2 space we take (NUM_SAMPLES_PER_AXIS * NUM_SAMPLES_PER_AXIS) samples
+ #define NUM_SAMPLES_PER_AXIS                1000
+diff --git a/tests/lib/rendering/rndr/CMakeLists.txt b/tests/lib/rendering/rndr/CMakeLists.txt
+index 0d93c9c..90da523 100644
+--- a/tests/lib/rendering/rndr/CMakeLists.txt
++++ b/tests/lib/rendering/rndr/CMakeLists.txt
+@@ -14,6 +14,12 @@ target_sources(${target}
+         TestSocketStream.cc
+ )
+ 
++message("IMATH_INCLUDE_DIRS=${IMATH_INCLUDE_DIRS}")
++target_include_directories(${target}
++    PRIVATE
++        ${IMATH_INCLUDE_DIRS}/Imath
++)
++
+ target_link_libraries(${target}
+     PRIVATE
+         Moonray::rendering_rndr
+diff --git a/tests/lib/rendering/rt/CMakeLists.txt b/tests/lib/rendering/rt/CMakeLists.txt
+index a71ca40..7ad85cf 100644
+--- a/tests/lib/rendering/rt/CMakeLists.txt
++++ b/tests/lib/rendering/rt/CMakeLists.txt
+@@ -14,13 +14,11 @@ target_sources(${target}
+ target_link_libraries(${target}
+     PRIVATE
+         Moonray::rendering_geom
+-        Moonray::rendering_pbr
+-        Moonray::rendering_rndr
+-        Moonray::rendering_rt
+         Moonray::rendering_shading
+         SceneRdl2::pdevunit
+         SceneRdl2::scene_rdl2
+         TBB::tbb
++        "$<LINK_GROUP:RESCAN,Moonray::rendering_pbr,Moonray::rendering_rndr,Moonray::rendering_rt>"
+ )
+ 
+ # Set standard compile/link options
+diff --git a/tests/lib/rendering/shading/ispc/CMakeLists.txt b/tests/lib/rendering/shading/ispc/CMakeLists.txt
+index a464a71..eea3d61 100644
+--- a/tests/lib/rendering/shading/ispc/CMakeLists.txt
++++ b/tests/lib/rendering/shading/ispc/CMakeLists.txt
+@@ -70,17 +70,15 @@ endif()
+ target_link_libraries(${target}
+     PRIVATE
+         Moonray::common_mcrt_macros
+-        Moonray::rendering_bvh_shading
+         Moonray::rendering_mcrt_common
+         Moonray::rendering_rndr
+-        Moonray::rendering_shading
+         Moonray::texturing_sampler
+-        Moonray::shading_ispc
+         SceneRdl2::common_math
+         SceneRdl2::pdevunit
+         SceneRdl2::scene_rdl2
+         SceneRdl2::render_util
+         ${PlatformSpecificLibs}
++        "$<LINK_GROUP:RESCAN,Moonray::rendering_bvh_shading,Moonray::rendering_shading,Moonray::shading_ispc>"
+ )
+ 
+ add_dependencies(${target} ${objLib})

@@ -1,0 +1,139 @@
+diff --git a/computation/progmcrt_merge/ProgMcrtMergeClockDeltaDriver.h b/computation/progmcrt_merge/ProgMcrtMergeClockDeltaDriver.h
+index 87d2d52..6e6d529 100644
+--- a/computation/progmcrt_merge/ProgMcrtMergeClockDeltaDriver.h
++++ b/computation/progmcrt_merge/ProgMcrtMergeClockDeltaDriver.h
+@@ -9,10 +9,9 @@
+ #include <mcrt_dataio/share/sock/SockServer.h>
+ #include <mcrt_dataio/share/sock/SockServerConnection.h>
+ 
+-#include <tbb/atomic.h>
+-
+ #include <condition_variable>
+ #include <memory>
++#include <atomic>
+ #include <mutex>
+ #include <thread>
+ 
+@@ -53,8 +52,8 @@ private:
+ 
+     std::thread mServerThread;
+     std::thread mWorkerThread;  // single worker
+-    tbb::atomic<ThreadState> mServerThreadState;
+-    tbb::atomic<ThreadState> mWorkerThreadState;
++    std::atomic<ThreadState> mServerThreadState;
++    std::atomic<ThreadState> mWorkerThreadState;
+     bool mThreadShutdown;
+ 
+     mutable std::mutex mMutex;
+diff --git a/computation/progmcrt_merge/ProgMcrtMergeComputation.cc b/computation/progmcrt_merge/ProgMcrtMergeComputation.cc
+index 19f1444..98958fa 100644
+--- a/computation/progmcrt_merge/ProgMcrtMergeComputation.cc
++++ b/computation/progmcrt_merge/ProgMcrtMergeComputation.cc
+@@ -110,7 +110,7 @@ ProgMcrtMergeComputation::configure(const std::string& op,
+     if (aConfig[arras4::api::ConfigNames::maxThreads].isIntegral()) {
+         mNumThreads = aConfig[arras4::api::ConfigNames::maxThreads].asInt();
+     } else {
+-        mNumThreads = tbb::task_scheduler_init::default_num_threads();
++        mNumThreads = std::thread::hardware_concurrency();
+     }
+ 
+     if (aConfig["packTilePrecision"].isString()) {
+@@ -184,7 +184,7 @@ ProgMcrtMergeComputation::onStart()
+ #       ifdef DEVELOP_VER_MESSAGE
+         std::cerr << ">> ProgMcrtMergeComputation.cc set TBB numThreads:" << mNumThreads << std::endl;
+ #       endif // end DEVELOP_VER_MESSAGE
+-        mTaskScheduler = new tbb::task_scheduler_init(mNumThreads);
++        mTaskScheduler = new tbb::global_control(tbb::global_control::max_allowed_parallelism, int(mNumThreads));
+     }
+ 
+     //------------------------------
+@@ -452,7 +452,7 @@ ProgMcrtMergeComputation::onViewportChanged(const mcrt::BaseFrame& msg)
+     // This mFeedbackActive condition is not propergated into FbMsgSingleFrame object yet. However, seting
+     // mFeedbackActive into FbMsgSingleFrame object would happen just after finishing this function.
+     // So we can use mFeedbackActive safely here.
+-    // Also, mFeedbackActive is only updated by debug command and we don¡Çt need to MTlock logic to access
++    // Also, mFeedbackActive is only updated by debug command and we donï¿½ï¿½t need to MTlock logic to access
+     // mFeedbackActive here.
+     //        
+     if (mFeedbackActive && mFeedbackIntervalSec > 0.0f) {
+@@ -896,7 +896,7 @@ ProgMcrtMergeComputation::processFeedback()
+     }
+ 
+     // Under regular progressiveFrame data send to the client situation, we update denoise related
+-    // information here, but we technically don¡Çt need these information under feedback logic.
++    // information here, but we technically donï¿½ï¿½t need these information under feedback logic.
+     // So we just skip them.
+ 
+     // We have to update mLastSentFeedbackSyncId for next feedback message
+diff --git a/computation/progmcrt_merge/ProgMcrtMergeComputation.h b/computation/progmcrt_merge/ProgMcrtMergeComputation.h
+index cb26090..66dc0ce 100644
+--- a/computation/progmcrt_merge/ProgMcrtMergeComputation.h
++++ b/computation/progmcrt_merge/ProgMcrtMergeComputation.h
+@@ -28,7 +28,7 @@
+ #include <scene_rdl2/common/grid_util/Parser.h>
+ #include <scene_rdl2/common/math/Viewport.h>
+ 
+-#include <tbb/task_scheduler_init.h>
++#include <tbb/global_control.h>
+ 
+ #include <cstdint>
+ #include <memory>
+@@ -185,7 +185,7 @@ private:
+ 
+     arras4::api::UUID mPrevRecvMsg {""}; // for debug message
+ 
+-    tbb::task_scheduler_init* mTaskScheduler {nullptr};
++    tbb::global_control* mTaskScheduler {nullptr};
+ 
+     std::string mSource;        // source id, correlating incoming to outgoing messages
+     
+diff --git a/lib/engine/mcrt/McrtUpdate.cc b/lib/engine/mcrt/McrtUpdate.cc
+index 9c537d3..440e430 100644
+--- a/lib/engine/mcrt/McrtUpdate.cc
++++ b/lib/engine/mcrt/McrtUpdate.cc
+@@ -3,6 +3,8 @@
+ 
+ //
+ //
++#include <functional>
++
+ #include "McrtUpdate.h"
+ 
+ namespace mcrt_computation {
+diff --git a/lib/engine/mcrt/RenderContextDriver.h b/lib/engine/mcrt/RenderContextDriver.h
+index 4f08235..0a6a9d9 100644
+--- a/lib/engine/mcrt/RenderContextDriver.h
++++ b/lib/engine/mcrt/RenderContextDriver.h
+@@ -29,7 +29,7 @@
+ #include <scene_rdl2/common/grid_util/Parser.h>
+ #include <scene_rdl2/common/math/Viewport.h>
+ 
+-#include <tbb/atomic.h>
++#include <atomic>
+ 
+ #include <condition_variable>
+ #include <mutex>
+diff --git a/lib/engine/mcrt/Watcher.h b/lib/engine/mcrt/Watcher.h
+index 9f87daf..439a9e7 100644
+--- a/lib/engine/mcrt/Watcher.h
++++ b/lib/engine/mcrt/Watcher.h
+@@ -6,7 +6,7 @@
+ #include <condition_variable>
+ #include <functional>
+ #include <mutex>
+-#include <tbb/atomic.h>
++#include <atomic>
+ #include <thread>
+ 
+ namespace mcrt_computation {
+@@ -59,8 +59,8 @@ private:
+ 
+     std::thread mThread;
+ 
+-    tbb::atomic<ThreadState> mThreadState {ThreadState::INIT};
+-    tbb::atomic<RunState> mRunState {RunState::WAIT};
++    std::atomic<ThreadState> mThreadState {ThreadState::INIT};
++    std::atomic<RunState> mRunState {RunState::WAIT};
+     bool mThreadShutdown {false}; 
+ 
+     mutable std::mutex mMutexBoot;

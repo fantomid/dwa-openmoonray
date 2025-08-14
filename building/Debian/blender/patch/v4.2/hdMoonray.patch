@@ -1,0 +1,370 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index bd5a120..ee51868 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,7 +11,6 @@ project(${projectString}
+ string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
+ list(APPEND CMAKE_MESSAGE_CONTEXT ${PROJECT_NAME})
+ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+-
+ include(OMR_Platform)
+ 
+ # ================================================
+diff --git a/cmd/hd_cmd/hd_render/CMakeLists.txt b/cmd/hd_cmd/hd_render/CMakeLists.txt
+index 6ac48cb..1024301 100644
+--- a/cmd/hd_cmd/hd_render/CMakeLists.txt
++++ b/cmd/hd_cmd/hd_render/CMakeLists.txt
+@@ -22,14 +22,12 @@ endif()
+ target_link_libraries(${target}
+     PRIVATE
+         SceneRdl2::scene_rdl2
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
++        OpenImageIO_Util
++        
+         JPEG::JPEG
+ 
+-        # pxr libs
+-        gf tf trace vt work   # base
+-        cameraUtil hd hdx hf  # imaging
+-        sdf usd usdGeom       # usd
+-        usdImaging
++        usd_ms
+ 
+         TBB::tbb
+         Python::Python
+diff --git a/cmd/hd_cmd/hd_render/OutputFile.h b/cmd/hd_cmd/hd_render/OutputFile.h
+index c3094ec..cc403d1 100644
+--- a/cmd/hd_cmd/hd_render/OutputFile.h
++++ b/cmd/hd_cmd/hd_render/OutputFile.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderBuffer.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_render/RenderSettings.h b/cmd/hd_cmd/hd_render/RenderSettings.h
+index 25ae696..e383f8d 100644
+--- a/cmd/hd_cmd/hd_render/RenderSettings.h
++++ b/cmd/hd_cmd/hd_render/RenderSettings.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderDelegate.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_render/SceneDelegate.h b/cmd/hd_cmd/hd_render/SceneDelegate.h
+index c326914..deaf2a3 100644
+--- a/cmd/hd_cmd/hd_render/SceneDelegate.h
++++ b/cmd/hd_cmd/hd_render/SceneDelegate.h
+@@ -6,7 +6,6 @@
+ #pragma once
+ 
+ #include "FreeCamera.h"
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sceneDelegate.h>
+ namespace hd_render {
+ 
+diff --git a/cmd/hd_cmd/hd_usd2rdl/CMakeLists.txt b/cmd/hd_cmd/hd_usd2rdl/CMakeLists.txt
+index 83d5456..6db2fc8 100644
+--- a/cmd/hd_cmd/hd_usd2rdl/CMakeLists.txt
++++ b/cmd/hd_cmd/hd_usd2rdl/CMakeLists.txt
+@@ -22,11 +22,7 @@ target_link_libraries(${target}
+     PRIVATE
+         SceneRdl2::scene_rdl2
+ 
+-        # pxr libs
+-        gf tf trace vt work   # base
+-        cameraUtil hd hdx hf  # imaging
+-        sdf usd usdGeom       # usd
+-        usdImaging
++        usd_ms
+ 
+         TBB::tbb
+         Python::Python
+diff --git a/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h b/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
+index 0bbc374..538a494 100644
+--- a/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
++++ b/cmd/hd_cmd/hd_usd2rdl/RenderSettings.h
+@@ -5,7 +5,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderDelegate.h>
+ 
+ #include <string>
+diff --git a/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h b/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
+index f657f17..39301ed 100644
+--- a/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
++++ b/cmd/hd_cmd/hd_usd2rdl/SceneDelegate.h
+@@ -6,7 +6,6 @@
+ #pragma once
+ 
+ #include "FreeCamera.h"
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sceneDelegate.h>
+ namespace hd_usd2rdl {
+ 
+diff --git a/lib/hydramoonray/CMakeLists.txt b/lib/hydramoonray/CMakeLists.txt
+index 5bc7fa8..5ba07c5 100644
+--- a/lib/hydramoonray/CMakeLists.txt
++++ b/lib/hydramoonray/CMakeLists.txt
+@@ -79,8 +79,7 @@ target_link_libraries(${component}
+         SceneRdl2::render_logging
+         SceneRdl2::scene_rdl2
+         TBB::tbb
+-        hd   # pxr imaging
+-        usdImaging
++        usd_ms
+         Python::Module
+         ${PlatformSpecificLibs}
+ )
+diff --git a/lib/hydramoonray/Camera.h b/lib/hydramoonray/Camera.h
+index 702add6..d9a102c 100644
+--- a/lib/hydramoonray/Camera.h
++++ b/lib/hydramoonray/Camera.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/camera.h>
+ namespace scene_rdl2 {namespace rdl2 { class Camera; } }
+ 
+diff --git a/lib/hydramoonray/CoordSys.h b/lib/hydramoonray/CoordSys.h
+index 112a0d7..7f11776 100644
+--- a/lib/hydramoonray/CoordSys.h
++++ b/lib/hydramoonray/CoordSys.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/coordSys.h>
+ 
+ namespace scene_rdl2 {namespace rdl2 { class SceneObject; } }
+diff --git a/lib/hydramoonray/Instancer.cc b/lib/hydramoonray/Instancer.cc
+index c856c00..7cbe30f 100644
+--- a/lib/hydramoonray/Instancer.cc
++++ b/lib/hydramoonray/Instancer.cc
+@@ -189,10 +189,10 @@ Instancer::makeInstanceGeometry(const pxr::SdfPath& prototypeId, scene_rdl2::rdl
+ 
+     for (auto p : mPrimvars) {
+         const pxr::TfToken& name = p.first;
+-        if (name == pxr::HdInstancerTokens->instanceTransform ||
+-            name == pxr::HdInstancerTokens->scale ||
+-            name == pxr::HdInstancerTokens->rotate ||
+-            name == pxr::HdInstancerTokens->translate)
++        if (name == pxr::HdInstancerTokens->instanceTransforms ||
++            name == pxr::HdInstancerTokens->instanceScales ||
++            name == pxr::HdInstancerTokens->instanceRotations ||
++            name == pxr::HdInstancerTokens->instanceTranslations)
+             continue; // skip the ones used directly
+ 
+         // HDM-130: Moonray InstanceGeometry primvars override primvars on the prototype, which
+@@ -261,7 +261,7 @@ Instancer::makeInstanceGeometry(const pxr::SdfPath& prototypeId, scene_rdl2::rdl
+ 
+         instancer->set("use_reference_xforms", true);
+ 
+-        auto i = mPrimvars.find(pxr::HdInstancerTokens->instanceTransform);
++        auto i = mPrimvars.find(pxr::HdInstancerTokens->instanceTransforms);
+         if (i != mPrimvars.end()) {
+             instancer->set<int>("method", Method::XFORM_LIST);
+             const pxr::VtValue& value = i->second.value;
+@@ -276,7 +276,7 @@ Instancer::makeInstanceGeometry(const pxr::SdfPath& prototypeId, scene_rdl2::rdl
+         } else {
+             instancer->set<int>("method", Method::XFORM_ATTRIBUTES);
+ 
+-            i = mPrimvars.find(pxr::HdInstancerTokens->scale);
++            i = mPrimvars.find(pxr::HdInstancerTokens->instanceScales);
+             if (i != mPrimvars.end()) {
+                 const pxr::VtValue& value = i->second.value;
+                 const pxr::VtVec3fArray& v = value.Get<pxr::VtVec3fArray>();
+@@ -288,7 +288,7 @@ Instancer::makeInstanceGeometry(const pxr::SdfPath& prototypeId, scene_rdl2::rdl
+                 }
+             }
+ 
+-            i = mPrimvars.find(pxr::HdInstancerTokens->rotate);
++            i = mPrimvars.find(pxr::HdInstancerTokens->instanceRotations);
+             if (i != mPrimvars.end()) {
+                 const pxr::VtValue& value = i->second.value;
+ 
+@@ -319,7 +319,7 @@ Instancer::makeInstanceGeometry(const pxr::SdfPath& prototypeId, scene_rdl2::rdl
+                     }
+                 }
+             }
+-            i = mPrimvars.find(pxr::HdInstancerTokens->translate);
++            i = mPrimvars.find(pxr::HdInstancerTokens->instanceTranslations);
+             if (i != mPrimvars.end()) {
+                 const pxr::VtValue& value = i->second.value;
+                 const pxr::VtVec3fArray& v = value.Get<pxr::VtVec3fArray>();
+diff --git a/lib/hydramoonray/Instancer.h b/lib/hydramoonray/Instancer.h
+index 9d7603f..448469b 100644
+--- a/lib/hydramoonray/Instancer.h
++++ b/lib/hydramoonray/Instancer.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/instancer.h>
+ #include <pxr/base/gf/matrix4f.h>
+ #include <pxr/base/tf/hashmap.h>
+diff --git a/lib/hydramoonray/Light.h b/lib/hydramoonray/Light.h
+index fd44be6..699284a 100644
+--- a/lib/hydramoonray/Light.h
++++ b/lib/hydramoonray/Light.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/light.h>
+ 
+ #include <scene_rdl2/scene/rdl2/Types.h>
+diff --git a/lib/hydramoonray/LightFilter.h b/lib/hydramoonray/LightFilter.h
+index a4a19bc..80d9e7f 100644
+--- a/lib/hydramoonray/LightFilter.h
++++ b/lib/hydramoonray/LightFilter.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/sprim.h>
+ #include <pxr/imaging/hd/material.h>
+ #include <scene_rdl2/scene/rdl2/LightFilter.h>
+diff --git a/lib/hydramoonray/Material.h b/lib/hydramoonray/Material.h
+index c5e33bc..078dc09 100644
+--- a/lib/hydramoonray/Material.h
++++ b/lib/hydramoonray/Material.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/material.h>
+ #include <pxr/imaging/hd/rprim.h>
+ 
+diff --git a/lib/hydramoonray/RenderBuffer.h b/lib/hydramoonray/RenderBuffer.h
+index c2ffef5..6cee1f7 100644
+--- a/lib/hydramoonray/RenderBuffer.h
++++ b/lib/hydramoonray/RenderBuffer.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/imaging/hd/renderBuffer.h>
+ #include <pxr/imaging/hd/aov.h>
+ #include <pxr/base/gf/vec4f.h>
+diff --git a/lib/hydramoonray/ValueConverter.h b/lib/hydramoonray/ValueConverter.h
+index 12adbb5..73d9d20 100644
+--- a/lib/hydramoonray/ValueConverter.h
++++ b/lib/hydramoonray/ValueConverter.h
+@@ -3,7 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // fix for icc-19/tbb bug
+ #include <pxr/base/gf/vec2f.h>
+ #include <pxr/base/gf/vec2d.h>
+ #include <pxr/base/gf/vec3f.h>
+diff --git a/plugin/adapters/CMakeLists.txt b/plugin/adapters/CMakeLists.txt
+index ef986a8..c662da4 100644
+--- a/plugin/adapters/CMakeLists.txt
++++ b/plugin/adapters/CMakeLists.txt
+@@ -32,7 +32,7 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        usdImaging
++        usd_ms
+ 
+ # these libraries are required by USD, but we don't
+ # currently have a USD config with the dependencies linked
+diff --git a/plugin/adapters/GeometryLightAdapter.h b/plugin/adapters/GeometryLightAdapter.h
+index 402b1be..4a6ad53 100644
+--- a/plugin/adapters/GeometryLightAdapter.h
++++ b/plugin/adapters/GeometryLightAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include "pxr/pxr.h"
+ 
+ #include "pxr/usdImaging/usdImaging/lightAdapter.h"
+diff --git a/plugin/adapters/MoonrayLightFilterAdapter.h b/plugin/adapters/MoonrayLightFilterAdapter.h
+index fd28dbd..642bbd9 100644
+--- a/plugin/adapters/MoonrayLightFilterAdapter.h
++++ b/plugin/adapters/MoonrayLightFilterAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include "pxr/pxr.h"
+ 
+ #include "pxr/usdImaging/usdImaging/lightFilterAdapter.h"
+diff --git a/plugin/adapters/ProceduralAdapter.h b/plugin/adapters/ProceduralAdapter.h
+index 9ca7f3b..348c0fd 100644
+--- a/plugin/adapters/ProceduralAdapter.h
++++ b/plugin/adapters/ProceduralAdapter.h
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include <tbb/tbb_machine.h> // This must be included before any pxr headers
+-
+ #include <pxr/pxr.h>
+ #include "pxr/usdImaging/usdImaging/api.h"
+ #include "pxr/usdImaging/usdImaging/primAdapter.h"
+diff --git a/plugin/hd_moonray/CMakeLists.txt b/plugin/hd_moonray/CMakeLists.txt
+index 1aa3088..0423248 100644
+--- a/plugin/hd_moonray/CMakeLists.txt
++++ b/plugin/hd_moonray/CMakeLists.txt
+@@ -40,8 +40,7 @@ target_link_libraries(${component}
+         McrtDataio::client_receiver
+         McrtMessages::mcrt_messages
+         TBB::tbb
+-        hd   # pxr imaging
+-        usdImaging
++        usd_ms
+         Python::Module
+         ${PlatformSpecificLibs}
+ )
+diff --git a/plugin/hd_moonray_debug/CMakeLists.txt b/plugin/hd_moonray_debug/CMakeLists.txt
+index 50300e8..5911331 100644
+--- a/plugin/hd_moonray_debug/CMakeLists.txt
++++ b/plugin/hd_moonray_debug/CMakeLists.txt
+@@ -36,8 +36,7 @@ target_link_libraries(${component}
+         SceneRdl2::common_fb_util
+         SceneRdl2::scene_rdl2
+         TBB::tbb
+-        hd   # pxr imaging
+-        usdImaging
++        usd_ms
+         Python::Module
+         ${PlatformSpecificLibs}
+ )
+diff --git a/plugin/hd_moonray_debug/RendererPlugin.cc b/plugin/hd_moonray_debug/RendererPlugin.cc
+index 36f713d..df30aa1 100644
+--- a/plugin/hd_moonray_debug/RendererPlugin.cc
++++ b/plugin/hd_moonray_debug/RendererPlugin.cc
+@@ -48,7 +48,7 @@ public:
+         return true;
+     }
+ #else
+-bool IsSupported() const override {
++    bool IsSupported() const override {
+         return true;
+     }
+ #endif

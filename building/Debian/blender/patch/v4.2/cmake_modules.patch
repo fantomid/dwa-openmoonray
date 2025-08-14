@@ -1,0 +1,34 @@
+diff --git a/cmake/MoonrayDso.cmake b/cmake/MoonrayDso.cmake
+index 6544313..ab25f8a 100644
+--- a/cmake/MoonrayDso.cmake
++++ b/cmake/MoonrayDso.cmake
+@@ -211,7 +211,10 @@ function(Moonray_dso_link_options target)
+     if(NOT IsDarwinPlatform)
+         target_link_options(${target}
+             PRIVATE
+-                -Wl,--enable-new-dtags              # Use RUNPATH instead of RPATH
++                -Wl,-O1,--enable-new-dtags  # Use RUNPATH instead of RPATH
++                -Wl,--sort-common           # Cause that ld sorts the common symbols by size when it places them in the appropriate output sections
++                -Wl,--as-needed             # Allow the linker to ignore, i.e., not link against, some of the libraries supplied on its command line if they are not actually used by the shared library that is being created
++                -Wl,-z,relro,-z,now         # Data relocation and protection (RELRO)
+         )
+     else()
+         target_link_options(${target}
+diff --git a/cmake/OMR_Platform.cmake b/cmake/OMR_Platform.cmake
+index 6a38c8f..3884f9a 100644
+--- a/cmake/OMR_Platform.cmake
++++ b/cmake/OMR_Platform.cmake
+@@ -68,10 +68,10 @@ if(IsDarwinPlatform)
+     set(GLOBAL_ISPC_FLAGS -D__aarch64__ -D__APPLE__ -D__ARM_NEON__)
+     set(GLOBAL_ISPC_INSTRUCTION_SETS neon-i32x4)
+     set(CMAKE_OSX_ARCHITECTURES arm64)
+-else() # Linux/Windows
++else() # Linux/Windows 
+     set(GLOBAL_CPP_FLAGS __AVX__)
+-    set(GLOBAL_LINK_FLAGS "-Wl,--enable-new-dtags")
+-    set(GLOBAL_INSTALL_RPATH "$ORIGIN" "$ORIGIN/../lib64" "${COMPILER_LIBRARY_DIR}")
++    set(GLOBAL_LINK_FLAGS "-Wl,-O1,--sort-common,--as-needed,--enable-new-dtags,-z,relro,-z,now")
++    set(GLOBAL_INSTALL_RPATH "$ORIGIN" "$ORIGIN/../lib" "${COMPILER_LIBRARY_DIR}")
+     set(GLOBAL_ISPC_INSTRUCTION_SETS avx2-i32x8)
+ endif()
+ 

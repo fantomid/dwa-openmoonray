@@ -1,0 +1,26 @@
+diff --git a/moonrayShaderDiscovery/CMakeLists.txt b/moonrayShaderDiscovery/CMakeLists.txt
+index ab376eb..65e3bd1 100644
+--- a/moonrayShaderDiscovery/CMakeLists.txt
++++ b/moonrayShaderDiscovery/CMakeLists.txt
+@@ -24,8 +24,6 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        # pxr
+-        ar ndr sdr
+         Boost::headers
+         # Python::Module
+ )
+diff --git a/moonrayShaderParser/CMakeLists.txt b/moonrayShaderParser/CMakeLists.txt
+index 55022c1..3124317 100644
+--- a/moonrayShaderParser/CMakeLists.txt
++++ b/moonrayShaderParser/CMakeLists.txt
+@@ -32,8 +32,6 @@ target_include_directories(${component}
+ 
+ target_link_libraries(${component}
+     PUBLIC
+-        # pxr
+-        ar ndr sdr
+         Boost::headers
+         # Python::Module
+ )

@@ -14,19 +14,10 @@ You may have to update your `.bashrc` file or update the environment variable be
     ```
 
 ---
-## Step 2. Regenerate the kernel initramfs and reboot
----
-    ```bash
-    export PATH=$PATH:/sbin
-    update-initramfs -u
-    reboot
-    ```
-
----
-## Step 3. Edit the APT sources file and update the packages information
+## Step 2. Edit the APT sources file and update the packages information
 ---
     Open the file /etc/apt/sources.list and add `non-free` and `contrib` after `main` entry for the binary and source packages. Update apt repositories.
-    
+
     ```bash
     nano /etc/apt/sources.list
     # For example, the modifications for bookworm and deb.debian.org mirror
@@ -35,13 +26,53 @@ You may have to update your `.bashrc` file or update the environment variable be
     apt update
     ```
 
+
 ---
-## Step 4. Install the NVIDIA drivers
+## Step 3. Create an APT preferences file to stay with the 545 version 545 of the nvidia drivers
 ---
-    The login screen could be not available after you disable the nouveau's driver (no window environment).
-    In that case, you have to login to the system with root privileges in a terminal screen and then install the nvidia driver with the command:
-    
+    The version 545 of the drivers is compatible with CUDA 12.1. And MoonRay required at most this version.
+
     ```bash
-    apt-get -y install nvidia-driver
+    echo 'Package: *nvidia*
+Pin: version 545.23.08-1
+Pin-Priority: 1001
+
+Package: cuda-drivers*
+Pin: version 545.23.08-1
+Pin-Priority: 1001
+
+Package: libcuda*
+Pin: version 545.23.08-1
+Pin-Priority: 1001
+
+
+Package: libxnvctrl* 
+Pin: version 545.23.08-1
+Pin-Priority: 1001
+
+Package: libnv*
+Pin: version 545.23.08-1
+Pin-Priority: 1001' > /etc/apt/preferences.d/nvidia-drivers
+    apt-get update
+    ```
+
+---
+## Step 3. Regenerate the kernel initramfs, download nvidia-driver, cuda and optix
+---
+
+    ```bash
+    export PATH=$PATH:/sbin
+    update-initramfs -u
+    apt-get install -d nvidia-driver cuda-toolkit-12-1 libnvoptix1
+    ```
+
+
+---
+## Step 4. Boot to runlevel 3, install the NVIDIA drivers and reboot
+---
+
+    ```bash
+    init 3
+    apt-get -y install nvidia-driver cuda-toolkit-12-1 libnvoptix1
     reboot
     ```

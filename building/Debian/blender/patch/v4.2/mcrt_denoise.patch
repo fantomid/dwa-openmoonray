@@ -1,0 +1,33 @@
+diff --git a/lib/denoiser/OptixDenoiserImpl.cc b/lib/denoiser/OptixDenoiserImpl.cc
+index df8c82a..d419926 100644
+--- a/lib/denoiser/OptixDenoiserImpl.cc
++++ b/lib/denoiser/OptixDenoiserImpl.cc
+@@ -9,6 +9,8 @@
+ #include <iostream>
+ #include <string.h>
+ 
++#define OPTIX_DENOISER_ALPHA_MODE_COPY 0
++
+ namespace moonray {
+ namespace denoiser {
+ 
+@@ -297,7 +299,18 @@ OptixDenoiserImpl::createOptixContext(OptixLogCallback logCallback,
+     cudaFree(0);    // init CUDA
+ 
+     int numDevices = 0;
+-    cudaGetDeviceCount(&numDevices);
++    cudaError_t cudaError = cudaSuccess;
++    cudaError = cudaGetDeviceCount(&numDevices);
++    if (cudaError != cudaSuccess) {
++        if (cudaError == cudaErrorNoDevice) {
++            *errorMsg = "No CUDA-capable devices were detected";
++        }
++        else {
++            *errorMsg = "The installed NVIDIA CUDA driver is older than the CUDA runtime library";
++        }
++        return false;
++    }
++    
+     if (numDevices == 0) {
+         *errorMsg = "No CUDA capable devices found";
+         return false;

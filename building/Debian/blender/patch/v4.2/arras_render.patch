@@ -1,0 +1,27 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a005147..9ec184d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -43,7 +43,7 @@ find_package(OpenEXR REQUIRED)
+ if(TARGET OpenEXR::IlmImfUtil)
+     set(IMATHHALF IlmBase::Half)
+ else()
+-    set(IMATHHALF Imath::Imath)
++    set(IMATHHALF Imath)
+ endif()
+ 
+ find_package(OpenImageIO REQUIRED)
+diff --git a/client/CMakeLists.txt b/client/CMakeLists.txt
+index 4491a0f..09485ce 100644
+--- a/client/CMakeLists.txt
++++ b/client/CMakeLists.txt
+@@ -36,7 +36,8 @@ target_link_libraries(${CmdName}
+         Boost::filesystem
+         ${IMATHHALF}
+         JPEG::JPEG
+-        OpenImageIO::OpenImageIO
++        OpenImageIO
++        OpenImageIO_Util
+         pthread
+         Qt5::Core
+         Qt5::Gui

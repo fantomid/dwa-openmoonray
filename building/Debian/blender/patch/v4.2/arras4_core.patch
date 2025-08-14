@@ -1,0 +1,31 @@
+diff --git a/arras4_core_impl/lib/execute/process_utils.cc b/arras4_core_impl/lib/execute/process_utils.cc
+index 5d7577d..cef4962 100644
+--- a/arras4_core_impl/lib/execute/process_utils.cc
++++ b/arras4_core_impl/lib/execute/process_utils.cc
+@@ -56,10 +56,10 @@ int countProcessGroupMembers(pid_t aPgid)
+ 
+     int memberCount = 0;
+     do {
+-        readdir_r(dir, &entry, &result);
++        result = readdir(dir);
+         if (result != NULL) {
+-            if (isdigit(entry.d_name[0])) {
+-                std::string name = std::string("/proc/") + entry.d_name + "/stat";
++            if (isdigit(result->d_name[0])) {
++                std::string name = std::string("/proc/") + result->d_name + "/stat";
+                 std::string statusLine = get_file_contents(name);
+ 
+                 // the process could go away while the list is being processed
+diff --git a/arras4_log/lib/arras4_log/SyslogLogger.cc b/arras4_log/lib/arras4_log/SyslogLogger.cc
+index 13f189a..3088843 100644
+--- a/arras4_log/lib/arras4_log/SyslogLogger.cc
++++ b/arras4_log/lib/arras4_log/SyslogLogger.cc
+@@ -35,7 +35,7 @@ void SyslogLogger::log(Level level, const char *message)
+ {
+ #pragma clang diagnostic push
+ #pragma clang diagnostic ignored "-Wformat-security"
+-    syslog(sPriorities[level], message);
++    syslog(sPriorities[level], "%s", message);
+ #pragma clang diagnostic pop
+ }
+ 

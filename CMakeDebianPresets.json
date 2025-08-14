@@ -5,7 +5,7 @@
             "name": "debian-bookworm-environment",
             "hidden": true,
             "environment": {
-                "DEPS_ROOT"                     : "/opt/MoonRay/installs",
+                "DEPS_ROOT"                     : "/opt/DreamWorksAnimation",
                 "BUILD_DIR"                     : "${sourceParentDir}/../build",
                 "Boost_ROOT"                    : "$env{DEPS_ROOT}",
                 "Libuuid_ROOT"                  : "$env{DEPS_ROOT}",
@@ -33,13 +33,52 @@
             }
         },
         {
+            "name": "debian-bookworm-blender-environment",
+            "hidden": true,
+            "environment": {
+                "DEPS_ROOT"                     : "/opt/DreamWorksAnimation",
+                "BUILD_DIR"                     : "${sourceParentDir}/../build",
+                "Boost_ROOT"                    : "$env{DEPS_ROOT}",
+                "Libuuid_ROOT"                  : "$env{DEPS_ROOT}",
+                "CppUnit_ROOT"                  : "$env{DEPS_ROOT}",
+                "ISPC"                          : "$env{DEPS_ROOT}/bin/ispc",
+                "JsonCpp_ROOT"                  : "$env{DEPS_ROOT}",
+                "Libcurl_ROOT"                  : "$env{DEPS_ROOT}",
+                "Log4cplus_ROOT"                : "$env{DEPS_ROOT}",
+                "LUA_DIR"                       : "$env{DEPS_ROOT}",
+                "OpenSubDiv_ROOT"               : "$env{DEPS_ROOT}",
+                "OpenVDB_ROOT"                  : "$env{DEPS_ROOT}",
+                "OPTIX_ROOT"                    : "$env{DEPS_ROOT}/optix",
+                "EMBREE_BASE_DIR"               : "$env{DEPS_ROOT}",
+                "OCIO_BASE_DIR"                 : "$env{DEPS_ROOT}",
+                "OPENIMAGEIOMOONRAY_ROOT"       : "$env{DEPS_ROOT}",
+                "OPENEXR_ROOT"                  : "$env{DEPS_ROOT}",
+                "ILMBASE_ROOT"                  : "$env{DEPS_ROOT}",
+                "Python_INCLUDE_DIRS"           : "$env{DEPS_ROOT}/include/python3.11",
+                "Python_LIBRARY"                : "$env{DEPS_ROOT}/lib",
+                "Python_LIBRARIES"              : "$env{DEPS_ROOT}/lib/python3.11",
+                "PXR_USD_LOCATION"              : "$env{DEPS_ROOT}",
+                "PXR_INCLUDE_DIRS"              : "$env{DEPS_ROOT}/include",
+                "Random123_ROOT"                : "$env{DEPS_ROOT}",
+                "TBB_ROOT"                      : "$env{DEPS_ROOT}",
+                "ZLIB_ROOT"                     : "$env{DEPS_ROOT}"
+            },
+            "cacheVariables": {
+                "CMAKE_PREFIX_PATH": "$env{DEPS_ROOT}",
+                "CMAKE_MODULE_PATH": "$env{DEPS_ROOT}/lib/cmake",
+                "PYTHON_EXECUTABLE": "python3.11",
+                "BOOST_PYTHON_COMPONENT_NAME": "python311",
+                "ABI_VERSION": "0"
+            }
+        },
+        {
             "name": "debian-bookworm-release",
             "displayName": "Debian Bookworm Release",
             "inherits": "debian-bookworm-environment",
             "binaryDir": "$env{BUILD_DIR}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceParentDir}/../installs/openmoonray",
+                "CMAKE_INSTALL_PREFIX": "/opt/DreamWorksAnimation/openmoonray",
                 "MOONRAY_USE_OPTIX": "NO"
             },
             "generator": "Unix Makefiles"
@@ -51,7 +90,19 @@
             "binaryDir": "$env{BUILD_DIR}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceParentDir}/../installs/openmoonray",
+                "CMAKE_INSTALL_PREFIX": "/opt/DreamWorksAnimation/openmoonray",
+                "MOONRAY_USE_OPTIX": "YES"
+            },
+            "generator": "Unix Makefiles"
+        },
+        {
+            "name": "debian-bookworm-blender-release",
+            "displayName": "Debian Bookworm Blender Release",
+            "inherits": "debian-bookworm-blender-environment",
+            "binaryDir": "$env{BUILD_DIR}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "/opt/DreamWorksAnimation/openmoonray",
                 "MOONRAY_USE_OPTIX": "YES"
             },
             "generator": "Unix Makefiles"
@@ -69,6 +120,13 @@
             "name": "debian-bookworm-release-gpu",
             "displayName": "Debian Bookworm Release GPU",
             "configurePreset": "debian-bookworm-release-gpu",
+            "configuration": "Release",
+            "targets": ["install"]
+        },
+        {
+            "name": "debian-bookworm-blender-release",
+            "displayName": "Debian Bookworm Blender Release",
+            "configurePreset": "debian-bookworm-blender-release",
             "configuration": "Release",
             "targets": ["install"]
         }

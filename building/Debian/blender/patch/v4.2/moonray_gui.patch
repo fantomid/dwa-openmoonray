@@ -1,0 +1,31 @@
+diff --git a/cmd/moonray_gui/RenderGui.h b/cmd/moonray_gui/RenderGui.h
+index 526ac1b..1a674ad 100644
+--- a/cmd/moonray_gui/RenderGui.h
++++ b/cmd/moonray_gui/RenderGui.h
+@@ -3,6 +3,8 @@
+ 
+ #pragma once
+ 
++#include <atomic>
++
+ #include "ColorManager.h"
+ #include "GuiTypes.h"
+ 
+@@ -10,8 +12,6 @@
+ #include <moonray/rendering/rndr/rndr.h>
+ #include <scene_rdl2/common/grid_util/ShmFbOutput.h>
+ 
+-#include <tbb/atomic.h>
+-
+ #define NUM_TILE_FADE_STEPS  4
+ 
+ namespace moonray_gui {
+@@ -120,7 +120,7 @@ private:
+     /// The renderering code will strive to render this frame. If it's rendering
+     /// a frame with a lower timestamp then we know the frame it's currently
+     /// rendering is old.
+-    tbb::atomic<uint32_t>   mMasterTimestamp;
++    std::atomic<uint32_t>   mMasterTimestamp;
+ 
+     /// The timestamp of the frame the renderer is currently processing.
+     uint32_t                mRenderTimestamp;

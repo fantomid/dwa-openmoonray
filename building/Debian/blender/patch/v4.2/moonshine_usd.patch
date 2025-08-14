@@ -1,0 +1,48 @@
+diff --git a/dso/geometry/Usd/CMakeLists.txt b/dso/geometry/Usd/CMakeLists.txt
+index 089b942..562fd92 100644
+--- a/dso/geometry/Usd/CMakeLists.txt
++++ b/dso/geometry/Usd/CMakeLists.txt
+@@ -7,7 +7,7 @@ moonray_dso_simple(UsdGeometry
+         ${PROJECT_NAME}::geometry_usd
+         SceneRdl2::common_platform
+         SceneRdl2::scene_rdl2
+-        usd)
++        usd_ms)
+ 
+ if(CMAKE_CXX_COMPILER_ID STREQUAL Intel)
+     target_compile_options(UsdGeometry
+diff --git a/dso/geometry/UsdInstance/CMakeLists.txt b/dso/geometry/UsdInstance/CMakeLists.txt
+index d5489e2..d6c856b 100644
+--- a/dso/geometry/UsdInstance/CMakeLists.txt
++++ b/dso/geometry/UsdInstance/CMakeLists.txt
+@@ -4,10 +4,14 @@
+ moonray_dso_simple(UsdInstanceGeometry
+     DEPENDENCIES
+         Moonray::rendering_bvh_shading
++        TBB::tbb
++        Python::Python
++        Python::Module
++        Boost::${BOOST_PYTHON_COMPONENT_NAME}
++        usd_ms
+         ${PROJECT_NAME}::geometry_usd
+         SceneRdl2::common_platform
+-        SceneRdl2::scene_rdl2
+-        usd)
++        SceneRdl2::scene_rdl2)
+ 
+ if(CMAKE_CXX_COMPILER_ID STREQUAL Intel)
+     target_compile_options(UsdInstanceGeometry
+diff --git a/lib/geometry/usd/CMakeLists.txt b/lib/geometry/usd/CMakeLists.txt
+index 76bfd84..b9815c1 100644
+--- a/lib/geometry/usd/CMakeLists.txt
++++ b/lib/geometry/usd/CMakeLists.txt
+@@ -44,8 +44,7 @@ target_link_libraries(${component}
+         Moonshine::geometry_data
+         SceneRdl2::common_platform
+         SceneRdl2::scene_rdl2
+-        usd
+-        usdSkel
++        usd_ms
+ 
+ # these libraries are required by USD, but we don't
+ # currently have a USD config with the dependencies linked
