@@ -93,24 +93,24 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
 ---
 
     ```bash
-    source /opt/DreamWorksAnimation/openmoonray/scripts/setup.sh
+    source /opt/DreamWorksAnimation/openmoonray/scripts/Debian/setupBlender.sh
     cd /opt/DreamWorksAnimation/tmp_dirs/source/openmoonray/testdata
     moonray_gui -exec_mode xpu -info -in curves.rdla
     ```
 
 ---
-## Step 8. Post-build/install Cleanup
----
-
-    ```bash
-    rm -rf /opt/DreamWorksAnimation/tmp_dirs
-    ```
-
----
-## Step 9. Create the Debian package
+## Step 8. Create the Debian package
 ---
 
     ```bash
     cd /opt/DreamWorksAnimation/tmp_dirs/source/openmoonray
     ./building/Debian/blender/make_deb.sh 4.2 /opt/DreamWorksAnimation/tmp_dirs/source/openmoonray /opt/DreamWorksAnimation
+    ```
+
+---
+## Step 9. Post-build/install Cleanup
+---
+
+    ```bash
+    rm -rf /opt/DreamWorksAnimation/tmp_dirs
     ```

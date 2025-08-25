@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0 
 
 # Install Debian/Ubuntu packages for building MoonRay for Blender
-# source this script in bash
+# Source this script in bash
 
 install_qt=1
-install_cuda=1
+install_cuda=0
 install_cgroup=1
 for i in "$@" 
 do
@@ -27,6 +27,7 @@ export PATH=$PATH:/sbin
 
 apt-get -y install build-essential git git-lfs wget
 
+# TODO Prefer installing CUDA with nvidia's drivers
 if [ $install_cuda -eq 1 ] 
 then
     echo "CUDA 12.1 installation, don't install the driver"

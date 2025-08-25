@@ -1,11 +1,13 @@
 Note 1: Root privileges are required to install the NVIDIA drivers.
-Note 2: On recent Debian's distributions, the `sbin` directory is not present in the PATH environment variable.
-You may have to update your `.bashrc` file or update the environment variable before launching the commands. 
+
+Note 2: On recent Debian's distributions, the `sbin` directory is not present in the PATH environment variable. You may have to update your `.bashrc` file or update the environment variable before launching the commands. 
 
 ---
 ## Step 1. Create file to disable the nouveau driver 
 ---
-    Open a terminal create the file /etc/modprobe.d/blacklist-nouveau.conf with the following contents.
+
+Open a terminal create the file /etc/modprobe.d/blacklist-nouveau.conf with the following contents.
+
 
     ```bash
     touch /etc/modprobe.d/blacklist-nouveau.conf
@@ -16,7 +18,9 @@ You may have to update your `.bashrc` file or update the environment variable be
 ---
 ## Step 2. Edit the APT sources file and update the packages information
 ---
-    Open the file /etc/apt/sources.list and add `non-free` and `contrib` after `main` entry for the binary and source packages. Update apt repositories.
+
+Open the file /etc/apt/sources.list and add `non-free` and `contrib` after `main` entry for the binary and source packages. Update apt repositories.
+
 
     ```bash
     nano /etc/apt/sources.list
@@ -26,53 +30,87 @@ You may have to update your `.bashrc` file or update the environment variable be
     apt update
     ```
 
+---
+## Step 3. Add the NVIDIA's repository for the CUDA version you target
+---
 
----
-## Step 3. Create an APT preferences file to stay with the 545 version 545 of the nvidia drivers
----
-    The version 545 of the drivers is compatible with CUDA 12.1. And MoonRay required at most this version.
+For CUDA 12.1, the version is available in the Bullseye repository.
+Add the Bullseye and the Bookworm repositories.
+
 
     ```bash
-    echo 'Package: *nvidia*
-Pin: version 545.23.08-1
-Pin-Priority: 1001
+    curl -fSsL https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/3bf863cc.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/nvidia-drivers-bookworm.gpg > /dev/null 2>&1
 
-Package: cuda-drivers*
-Pin: version 545.23.08-1
-Pin-Priority: 1001
+    echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers-bookworm.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /' | sudo tee /etc/apt/sources.list.d/nvidia-drivers-bookworm.list
 
-Package: libcuda*
-Pin: version 545.23.08-1
-Pin-Priority: 1001
+    curl -fSsL https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/3bf863cc.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/nvidia-drivers-bullseye.gpg > /dev/null 2>&1
 
+    echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers-bullseye.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/ /' | sudo tee /etc/apt/sources.list.d/nvidia-drivers-bullseye.list
+    nano /etc/apt/sources.list
 
-Package: libxnvctrl* 
-Pin: version 545.23.08-1
-Pin-Priority: 1001
-
-Package: libnv*
-Pin: version 545.23.08-1
-Pin-Priority: 1001' > /etc/apt/preferences.d/nvidia-drivers
-    apt-get update
+    apt update
     ```
 
 ---
-## Step 3. Regenerate the kernel initramfs, download nvidia-driver, cuda and optix
+## Step 4. Create an APT preferences file to stay with NVIDIA drivers compatible with CUDA 12.1
+---
+
+You could install other version that is compatible with CUDA 12.1 based on the following information:
+https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html
+
+Drivers version have to be at least in version 525 and lower than version 580.
+    
+    ```bash
+    echo 'Package: *nvidia*
+    Pin: version 575.57.08-1
+    Pin-Priority: 1001
+
+    Package: cuda-drivers*
+    Pin: version 575.57.08-1
+    Pin-Priority: 1001
+
+    Package: libcuda*
+    Pin: version 575.57.08-1
+    Pin-Priority: 1001
+
+    Package: libxnvctrl* 
+    Pin: version 575.57.08-1
+    Pin-Priority: 1001
+
+    Package: libnv*
+    Pin: version 575.57.08-1
+    Pin-Priority: 1001' > /etc/apt/preferences.d/nvidia-drivers
+
+    apt-get update
+    ```
+
+
+---
+## Step 5. Regenerate the kernel initramfs, download nvidia-driver, cuda and optix
 ---
 
     ```bash
     export PATH=$PATH:/sbin
     update-initramfs -u
-    apt-get install -d nvidia-driver cuda-toolkit-12-1 libnvoptix1
+    apt-get install -d nvidia-driver cuda-toolkit-12-1 libnvoptix1 nvidia-settings cuda-drivers
     ```
 
-
 ---
-## Step 4. Boot to runlevel 3, install the NVIDIA drivers and reboot
+## Step 6. Go to runlevel 3, install all downloaded packages and reboot
 ---
 
     ```bash
     init 3
-    apt-get -y install nvidia-driver cuda-toolkit-12-1 libnvoptix1
+    apt-get -y install nvidia-driver cuda-toolkit-12-1 libnvoptix1 nvidia-settings cuda-drivers
     reboot
     ```
+
+--
+## References
+--
+
+    * Linux Capable
+    - [How to Install CUDA Toolkit on Debian 12, 11, or 10](ttps://linuxcapable.com/how-to-install-cuda-on-debian-linux/)
+    - [How to Install Nvidia Drivers on Debian 12 or 11](https://linuxcapable.com/install-nvidia-drivers-on-debian/)
+    * Article from Levente Csikor on medium.com
+    https://medium.com/codex/install-nvidia-drivers-cuda-on-debian-12-bookworm-nvidia-smi-69d2980247c6
