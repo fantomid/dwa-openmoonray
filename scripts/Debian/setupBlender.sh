@@ -4,7 +4,7 @@
 # setup environment variables to use release
 
 sourcedir="$(realpath $( dirname -- "${BASH_SOURCE[0]:-$0}"))"
-omr_root="$(realpath ${sourcedir}/..)"
+omr_root="$(realpath ${sourcedir}/../..)"
 
 # Walk up to find the top-level install dir where the dependencies are installed
 install_root=${omr_root}

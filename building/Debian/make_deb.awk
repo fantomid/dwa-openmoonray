@@ -2,6 +2,7 @@ BEGIN {
     FS = ";"
     fieldList["%CONTROL_FIELD_PACKAGE%"] = valuePackage;
     fieldList["%CONTROL_FIELD_DEPENDS%"] = valueDepends;
+    fieldList["%CONTROL_FIELD_DESCRIPTION%"] = valueDescription;
 }
 {
     if ( $1 in fieldList )

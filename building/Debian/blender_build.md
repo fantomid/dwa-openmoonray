@@ -17,7 +17,7 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
     and several of the scripts mentioned in these instructions assume this location/structure.
     
     ```bash
-    mkdir -p /opt/DreamWorksAnimation/tmp_dirs/{build,build-deps,source,tmp}
+    mkdir -p /opt/DreamWorksAnimation/tmp_dirs/{build,build-deps,source,tmp,packages}
     mkdir -p /opt/DreamWorksAnimation/{bin,lib,share,optix,include}
     mkdir /opt/DreamWorksAnimation/lib/cmake
     ```
