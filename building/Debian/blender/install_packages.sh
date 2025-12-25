@@ -27,12 +27,9 @@ export PATH=$PATH:/sbin
 
 apt-get -y install build-essential git git-lfs wget
 
-# TODO Prefer installing CUDA with nvidia's drivers
 if [ $install_cuda -eq 1 ] 
 then
-    echo "CUDA 12.1 installation, don't install the driver"
-    wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda_12.1.0_530.30.02_linux.run
-    sh cuda_12.1.0_530.30.02_linux.run --tmpdir=/opt/DreamWorksAnimation/tmp_dirs/tmp
+    echo "CUDA 12.1 is the mandatory version.\nFollow instructions in nvidia_drivers markdown file to install the NVIDIA drivers."
 fi
 
 if [ $install_cgroup -eq 1 ] 

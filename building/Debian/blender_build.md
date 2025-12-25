@@ -12,13 +12,14 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
 ---
 ## Step 1. Create the folders
 ---
-    Create a clean root folder for moonray.  Attempting to build atop a previous installation may cause issues.
-    These can be created in the location of your choosing, but these instruction, the provided CMake presets,
-    and several of the scripts mentioned in these instructions assume this location/structure.
-    
+Create a clean root folder for moonray.
+Attempting to build atop a previous installation may cause issues.
+These can be created in the location of your choosing, but these instruction, the provided CMake presets,
+and several of the scripts mentioned in these instructions assume this location/structure.
+
     ```bash
     mkdir -p /opt/DreamWorksAnimation/tmp_dirs/{build,build-deps,source,tmp,packages}
-    mkdir -p /opt/DreamWorksAnimation/{bin,lib,share,optix,include}
+    mkdir -p /opt/DreamWorksAnimation/{bin,lib,share,optix,include,tmp}
     mkdir /opt/DreamWorksAnimation/lib/cmake
     ```
 
@@ -39,13 +40,13 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
     ./source/openmoonray/building/Debian/blender/install_packages.sh
     exit
     ```
-    During cuda toolkit installation, uncheck *Driver installation*
-    You can add argument `--noqt` to skip GUI support.
-    For GPU support, copy the Optix headers that you downloaded and extracted into */opt/Moonray/optix*
+To install NVIDIA drivers, follow the instructions [here](nvidia_drivers.md).
+
+You can add argument `--noqt` to skip GUI support.
+For GPU support, copy the Optix headers that you downloaded and extracted into */opt/DreamWorksAnimation/optix*.
 
     ```bash
     cp -r /tmp/optix/include/ /opt/DreamWorksAnimation/optix
-    apt-get -y install libnvoptix1
     ```
 
 ---
@@ -70,7 +71,7 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
 ---
 ## Step 6. Patch the source code
 ---
-    Note: Before building MoonRay, the source code has to be patched
+Note: Before building MoonRay, the source code has to be patched.
 
     ```bash
     cd /opt/DreamWorksAnimation/tmp_dirs/source/openmoonray
@@ -80,7 +81,7 @@ To install NVIDIA drivers on Debian, some instructions are available [here](nvid
 ---
 ## Step 6. Build MoonRay
 ---
-    Note: Before building, check that the CUDA compiler is in your PATH by launching the `nvcc` command.
+Note: Before building, check that the CUDA compiler is in your PATH by launching the `nvcc` command.
 
     ```bash
     cd /opt/DreamWorksAnimation/tmp_dirs/source/openmoonray
