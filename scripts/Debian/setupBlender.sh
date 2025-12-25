@@ -17,7 +17,9 @@ echo "Found install root at ${install_root}"
 echo "Setting up release in ${omr_root}"
 
 # NB required for Arras to function (it needs to find execComp)
-export PATH=${omr_root}/bin:${PATH}
+export PATH=${install_root}/bin:${omr_root}/bin:${PATH}
+export LD_LIBRARY_PATH=${install_root}/lib:${omr_root}/lib:${omr_root}/plugin:${LD_LIBRARY_PATH}
+export HDMOONRAY_RDLA_OUTPUT=${install_root}/tmp
 
 # need python modules for the USD interface
 export PYTHONPATH=${install_root}/lib/python3.11:/usr/local/lib/python:${PYTHONPATH}
